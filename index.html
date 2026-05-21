@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>RFK PRO | Sistema de Gestão de Serviços</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: linear-gradient(135deg, #f0f9ff 0%, #e6f0fa 100%); min-height: 100vh; }
+    .page { display: none; }
+    .page-active { display: block !important; }
+    .card-pasta { padding: 20px; border-radius: 28px; margin-bottom: 18px; background: white; transition: all 0.3s; position: relative; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.05); }
+    .card-pasta:hover { transform: translateY(-2px); }
+    .pasta-atraso { background: linear-gradient(135deg, #fff5f5 0%, #fee 100%); border-left: 6px solid #dc2626; }
+    .pasta-atencao { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 6px solid #f59e0b; }
+    .pasta-confirmada { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 6px solid #22c55e; opacity: 0.85; }
+    .pasta-em-dia { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-left: 6px solid #3b82f6; }
+    .sinal-alerta { position: absolute; top: -12px; right: 12px; background: linear-gradient(135deg, #dc2626, #ef4444); color: white; padding: 6px 16px; border-radius: 40px; font-size: 11px; font-weight: 900; text-transform: uppercase; animation: pulse 1.5s infinite; box-shadow: 0 4px 12px rgba(220,38,38,0.4); z-index: 20; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.98)} }
+    input, select, textarea { border: 2px solid #e2e8f0; border-radius: 16px; padding: 12px 16px; outline: none; background: white; width: 100%; font-size: 14px; font-weight: 500; transition: all 0.2s ease; }
+    input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); transform: translateY(-1px); }
+    .btn-pasta { border-radius: 14px; padding: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; }
+    .btn-pasta:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .toast-notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 48px; font-weight: 600; font-size: 13px; z-index: 1000; transition: transform 0.3s ease; white-space: nowrap; }
+    .toast-notification.show { transform: translateX(-50%) translateY(0); }
+    .recomendacao-box { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 4px solid #0284c7; padding: 12px; border-radius: 16px; margin-top: 8px; }
+    .pdf-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); flex-direction: column; gap: 15px; color: white; text-align: center; padding: 20px; }
+    .spinner { width: 60px; height: 60px; border: 5px solid #f3f3f3; border-top: 5px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .historico-card { margin-top: 20px; background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-radius: 20px; padding: 18px; border: 1px solid #e2e8f0; }
+    .historico-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; flex-wrap: wrap; gap: 10px; }
+    .historico-header h4 { font-size: 13px; font-weight: 800; color: #1e40af; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+    .progresso-wrapper { display: flex; align-items: center; gap: 12px; background: #f1f5f9; padding: 6px 12px; border-radius: 40px; }
+    .progresso-texto { font-size: 11px; font-weight: 700; }
+    .progresso-barra-container { background: #e2e8f0; border-radius: 20px; height: 6px; width: 100px; overflow: hidden; }
+    .progresso-barra { background: linear-gradient(90deg, #3b82f6, #2563eb); height: 100%; border-radius: 20px; transition: width 0.3s ease; }
+    .lista-visitas { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; }
+    .visita-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: white; border-radius: 16px; border: 1px solid #f1f5f9; flex-wrap: wrap; gap: 8px; }
+    .visita-numero { font-weight: 800; font-size: 12px; color: #64748b; min-width: 45px; }
+    .visita-data { flex: 2; font-weight: 700; font-size: 13px; }
+    .status-label { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 40px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .status-realizada { background: #dcfce7; color: #166534; }
+    .status-proxima { background: #dbeafe; color: #1e40af; }
+    .status-pendente { background: #fef3c7; color: #92400e; }
+    .mensagem-conclusao { margin-top: 12px; padding: 10px; background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-radius: 14px; text-align: center; font-size: 11px; font-weight: 800; color: #166534; }
+    .modal-armadilhas, .modal-qrcode, .modal-quimico, .modal-editar-quimico { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal-content { background: white; border-radius: 32px; max-width: 90%; width: 400px; max-height: 80vh; overflow-y: auto; padding: 24px; text-align: center; position: relative; }
+    .close-modal { position: absolute; top: 12px; right: 16px; font-size: 24px; cursor: pointer; color: #94a3b8; }
+    .close-modal:hover { color: #ef4444; }
+    .local-armadilha-item { background: #f8fafc; border-radius: 16px; padding: 12px; margin-bottom: 10px; border-left: 4px solid #f59e0b; display: flex; justify-content: space-between; align-items: center; }
+    .nota-contrato { font-size: 9px; color: #475569; background: #f1f5f9; padding: 8px 12px; border-radius: 12px; margin-top: 8px; border-left: 3px solid #3b82f6; }
+    .dashboard-card { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .chart-container { max-width: 100%; height: 200px; }
+    .radio-group { display: flex; gap: 20px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
+    .radio-group label { display: flex; align-items: center; gap: 6px; font-weight: 500; font-size: 13px; cursor: pointer; }
+    .numero-controle { font-size: 9px; background: #f1f5f9; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-left: 8px; }
+    #qrcode { display: flex; justify-content: center; margin: 20px 0; }
+    .btn-quimico { background: #6b21a5; border-radius: 20px; padding: 2px 6px; font-size: 9px; margin-left: 6px; color: white; display: inline-block; }
+    .editar-visita { cursor: pointer; margin-left: 8px; font-size: 12px; background: #e2e8f0; padding: 2px 6px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+    .editar-visita:hover { background: #cbd5e1; }
+    @media (max-width: 640px) {
+      .visita-item { flex-direction: column; align-items: flex-start; }
+      .status-label { align-self: flex-start; }
+      .btn-pasta { padding: 6px; font-size: 9px; }
+      .card-pasta .flex { flex-direction: column; gap: 10px; }
+      .card-pasta .flex > div:first-child { width: 100%; }
+      .card-pasta .flex > div:last-child { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-50 border-b-2 border-blue-500">
+  <div class="max-w-md mx-auto px-6 py-4">
+    <div onclick="tentarAcessoAdmin()" class="cursor-pointer active:scale-95 transition-transform inline-block">
+      <h1 class="font-black text-2xl bg-gradient-to-r from-blue-800 to-blue-600 bg-clip-text text-transparent">RFKserviço.PRO</h1>
+      <p class="text-[10px] text-gray-500 font-bold uppercase">Dashboard | Controle de Visitas | Relatórios</p>
+    </div>
+  </div>
+</header>
+
+<main id="view-admin" class="page p-4 max-w-md mx-auto pb-28">
+  <div class="mb-6 grid grid-cols-1 gap-4">
+    <div class="dashboard-card">
+      <h3 class="font-bold text-blue-800 mb-2">📊 Visão Geral</h3>
+      <div class="grid grid-cols-2 gap-3 text-center mb-4">
+        <div class="bg-blue-50 p-3 rounded-xl"><p class="text-xs text-gray-500">Clientes Ativos</p><p id="dashboard-total" class="text-2xl font-black text-blue-600">0</p></div>
+        <div class="bg-red-50 p-3 rounded-xl"><p class="text-xs text-gray-500">Atrasados</p><p id="dashboard-atraso" class="text-2xl font-black text-red-600">0</p></div>
+        <div class="bg-green-50 p-3 rounded-xl"><p class="text-xs text-gray-500">Visitas Hoje</p><p id="dashboard-hoje" class="text-2xl font-black text-green-600">0</p></div>
+        <div class="bg-purple-50 p-3 rounded-xl"><p class="text-xs text-gray-500">Próx. 7 dias</p><p id="dashboard-semana" class="text-2xl font-black text-purple-600">0</p></div>
+      </div>
+      <div class="chart-container"><canvas id="statusChart" width="300" height="150" style="max-width:100%; height:150px;"></canvas></div>
+    </div>
+  </div>
+  <div class="grid grid-cols-4 gap-2 mb-6">
+    <button onclick="exportarBackupSeguro()" class="bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-bold">🔐 Backup</button>
+    <button onclick="importarBackupSeguro()" class="bg-amber-600 text-white py-2 rounded-xl text-[10px] font-bold">📁 Restaurar</button>
+    <button onclick="limparArmazenamentoSeguro()" class="bg-red-600 text-white py-2 rounded-xl text-[10px] font-bold">🗑️ Limpar</button>
+    <button onclick="gerarQRCodeCliente()" class="bg-indigo-600 text-white py-2 rounded-xl text-[10px] font-bold">📱 QR Code</button>
+  </div>
+  <div id="form-container" class="bg-white rounded-3xl border-2 border-blue-100 mb-8 shadow-xl overflow-hidden">
+    <div class="bg-gradient-to-r from-blue-50 to-white px-6 py-4 border-b border-blue-100 flex justify-between items-center">
+      <h2 class="text-xs font-black text-blue-900 uppercase">📝 Registro de Atendimento</h2>
+      <span onclick="cancelarEdicao()" class="text-red-600 cursor-pointer text-[10px] font-bold hidden" id="btn-cancelar-edit">✖ Limpar</span>
+    </div>
+    <div class="p-6">
+      <input id="f-id" type="hidden">
+      <div class="space-y-4">
+        <div><label class="block font-black text-gray-500 uppercase text-[9px]">👤 Nome do Cliente *</label><input id="f-nome" type="text" class="w-full"></div>
+        <div><label class="block font-black text-gray-500 uppercase text-[9px]">📱 WhatsApp *</label><input id="f-tel" type="tel" oninput="mascaraTel(this)" class="w-full" placeholder="(99) 99999-9999"></div>
+        <div class="grid grid-cols-3 gap-2"><div class="col-span-2"><input id="f-rua" placeholder="Rua"></div><div><input id="f-numero" placeholder="Nº"></div></div>
+        <div class="grid grid-cols-2 gap-2"><div><input id="f-bairro" placeholder="Bairro"></div><div><input id="f-complemento" placeholder="Complemento"></div></div>
+        <div class="grid grid-cols-2 gap-2"><div><input id="f-cidade" placeholder="Cidade" value="Tonantins"></div><div><input id="f-cep" placeholder="CEP" oninput="mascaraCEP(this)"></div></div>
+        <div class="grid grid-cols-2 gap-2"><select id="f-tipoImovel"><option value="casa">🏠 Casa</option><option value="comercio">🏢 Comércio</option><option value="apartamento">🏢 Apartamento</option><option value="sitio">🌳 Sítio/Chácara</option><option value="industria">🏭 Indústria</option></select><select id="f-ambiente"><option value="residencial">🏠 Residencial</option><option value="comercial">🏢 Comercial</option><option value="industrial">🏭 Industrial</option><option value="rural">🌾 Rural</option></select></div>
+        <div class="grid grid-cols-3 gap-2"><div><input id="f-moradores" type="number" value="1" placeholder="Moradores"></div><div><input id="f-criancas" type="number" value="0" placeholder="Crianças <6a"></div><div><input id="f-animais" type="number" value="0" placeholder="Animais"></div></div>
+        <div><input id="f-tipoAnimais" placeholder="Tipo de animais"></div>
+        <div id="pragas-container" class="grid grid-cols-2 gap-1">
+          <label><input type="checkbox" value="baratas" onchange="atualizarRecomendacao()"> Baratas</label><label><input type="checkbox" value="formigas" onchange="atualizarRecomendacao()"> Formigas</label>
+          <label><input type="checkbox" value="ratos" onchange="verificarPragasRatos(); atualizarRecomendacao();"> Ratos</label><label><input type="checkbox" value="escorpioes" onchange="atualizarRecomendacao()"> Escorpiões</label>
+          <label><input type="checkbox" value="aranhas" onchange="atualizarRecomendacao()"> Aranhas</label><label><input type="checkbox" value="cupins" onchange="atualizarRecomendacao()"> Cupins</label>
+          <label><input type="checkbox" value="mosquitos" onchange="atualizarRecomendacao()"> Mosquitos</label><label><input type="checkbox" value="pulgas" onchange="atualizarRecomendacao()"> Pulgas</label>
+        </div>
+        <div id="armadilhas-container" style="display:none;" class="p-3 bg-amber-50 rounded-xl">
+          <div class="flex justify-between items-center"><label class="font-bold text-amber-800">🐀 LOCAIS DAS ARMADILHAS</label><button type="button" onclick="abrirModalArmadilhas()" class="text-[10px] bg-amber-600 text-white px-3 py-1 rounded-full">Gerenciar</button></div>
+          <div id="locais-armadilhas-preview" class="text-[9px] mt-2"></div>
+          <input type="hidden" id="f-locaisArmadilhas" value="[]">
+        </div>
+        <div><select id="f-tipoTrabalho" onchange="atualizarRecomendacao()"><option value="pulverizacao">💨 Pulverização</option><option value="gel">🍯 Gel</option><option value="pó">⚡ Pó</option><option value="armadilha">📦 Armadilhas</option><option value="fumigacao">🌫️ Fumigação</option><option value="integrado">🔄 Integrado</option></select></div>
+        <div><label class="block font-black text-gray-500 uppercase text-[9px] mb-1">🏷️ Tipo de Serviço</label><div class="radio-group"><label><input type="radio" name="tipoServico" value="tratamento" checked> 🩺 Tratamento</label><label><input type="radio" name="tipoServico" value="preventivo"> 🛡️ Preventivo</label></div></div>
+        <div id="recomendacao-container" class="recomendacao-box hidden"><p class="text-[9px] font-black">🔬 ESPECIFICAÇÃO DE INSUMOS (ANVISA)</p><p id="recomendacao-texto"></p><div id="produtos-container" class="space-y-1"></div></div>
+        <div class="grid grid-cols-2 gap-2"><select id="f-garantia" onchange="onGarantiaChange()"><option value="40">40 dias</option><option value="60">60 dias</option><option value="90" selected>90 dias</option><option value="180">180 dias</option></select><select id="f-freq" onchange="validarFrequenciaInput()"><option value="7">Semanal</option><option value="15">Quinzenal</option><option value="30">Mensal</option></select></div>
+        <div class="grid grid-cols-2 gap-2"><input id="f-inicio" type="date" onchange="validarDataInicio(); calcularProximaAutomatica()"><input id="f-termino" type="date" readonly disabled></div>
+        <div class="grid grid-cols-2 gap-2"><input id="f-prox" type="date" onchange="validarDataProxima()"><input id="f-realizadas" type="number" value="1" onchange="validarRealizadasInput()" min="0"></div>
+        <div id="info-visitas" class="text-[9px] text-gray-500"></div>
+        <div class="nota-contrato">ℹ️ As datas são estimativas. Podem ser adiadas/antecipadas em até 5 dias úteis.</div>
+        <textarea id="f-obs" rows="2" placeholder="Observações"></textarea>
+        <button onclick="salvarCliente()" class="w-full bg-blue-700 text-white py-3 rounded-xl font-bold">💾 Salvar Contrato</button>
+      </div>
+    </div>
+  </div>
+  <div id="lista-clientes" class="space-y-4"></div>
+</main>
+
+<main id="view-cliente" class="page p-6 max-w-md mx-auto min-h-screen">
+  <div class="bg-white rounded-3xl shadow-2xl p-8 text-center">
+    <div class="bg-blue-600 w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center text-white text-4xl">🛡️</div>
+    <h2 class="font-black text-2xl">Área do Cliente</h2>
+    <input id="input-c-tel" type="tel" oninput="mascaraTel(this)" placeholder="Seu WhatsApp" class="text-center font-bold text-lg mb-4 w-full">
+    <button onclick="acessoCliente()" class="w-full bg-blue-700 text-white py-3 rounded-xl font-bold">🔍 Verificar Garantia</button>
+  </div>
+  <div id="box-cliente-result"></div>
+</main>
+
+<!-- MODAL PERGUNTAR APLICAÇÃO QUÍMICA -->
+<div id="modal-quimico" class="modal-quimico">
+  <div class="modal-content">
+    <span class="close-modal" onclick="fecharModalQuimico()">&times;</span>
+    <h3 class="font-bold text-lg mb-4">🧪 Registrar Aplicação Química</h3>
+    <p class="mb-4">Houve uso de <strong>carga química</strong> (inseticidas/raticidas) nesta visita?</p>
+    <div class="flex gap-4 justify-center flex-wrap">
+      <button onclick="finalizarVisitaComQuimico(true)" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold">✅ Sim</button>
+      <button onclick="finalizarVisitaComQuimico(false)" class="bg-gray-600 text-white px-6 py-2 rounded-full font-bold">❌ Não</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR APLICAÇÃO QUÍMICA -->
+<div id="modal-editar-quimico" class="modal-editar-quimico">
+  <div class="modal-content">
+    <span class="close-modal" onclick="fecharModalEditarQuimico()">&times;</span>
+    <h3 class="font-bold text-lg mb-4">✏️ Editar Aplicação Química</h3>
+    <p id="editar-visita-label" class="mb-4 text-sm">Editando visita:</p>
+    <div class="flex flex-col gap-3 items-center">
+      <button onclick="salvarEdicaoQuimico(true)" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold w-full">✅ Sim (aplicou químico)</button>
+      <button onclick="salvarEdicaoQuimico(false)" class="bg-gray-600 text-white px-6 py-2 rounded-full font-bold w-full">❌ Não (apenas inspeção)</button>
+      <button onclick="salvarEdicaoQuimico(null)" class="bg-yellow-600 text-white px-6 py-2 rounded-full font-bold w-full">🔄 Não informado (limpar)</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-armadilhas" class="modal-armadilhas">
+  <div class="modal-content">
+    <span class="close-modal" onclick="fecharModalArmadilhas()">&times;</span>
+    <h3 class="font-bold text-lg mb-4">Locais das Armadilhas</h3>
+    <div id="lista-locais-modal" class="mb-4"></div>
+    <div class="flex gap-2"><input id="novo-local-input" placeholder="Ex: Cozinha, Área de serviço..." class="flex-1"><button onclick="adicionarLocalArmadilha()" class="bg-blue-600 text-white px-3 py-2 rounded-lg">+ Adicionar</button></div>
+    <button onclick="salvarLocaisArmadilhas()" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-full w-full">Salvar</button>
+  </div>
+</div>
+
+<div id="modal-qrcode" class="modal-qrcode">
+  <div class="modal-content">
+    <span class="close-modal" onclick="fecharModalQR()">&times;</span>
+    <h3 class="font-bold text-lg mb-4">📱 QR Code para o Cliente</h3>
+    <p class="text-sm mb-2">Escaneie com o celular para acessar a área do cliente e baixar seu certificado.</p>
+    <div id="qrcode"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast-notification"></div>
+<div id="pdf-loading" class="pdf-loading"><div class="spinner"></div><p>Gerando PDF... Aguarde</p><p id="pdf-status"></p></div>
+<input type="file" id="restore-file-input" style="display:none">
+
+<script>
+  // ==================== CONSTANTES ====================
+  const SENHA_MESTRA = "admin123";
+  const STORAGE_KEY = 'rfk_db_encrypted';
+  const DADOS_EMPRESA = { 
+    nome: "RFK SERVIÇO LTDA", 
+    cnpj: "63.727.951/0001-87", 
+    telefone: "(97) 98442-5460", 
+    email: "valdosantos094@gmail.com", 
+    endereco: "Rua Antônio Morango, 001, Bairro Manacá - Tonantins/AM"
+  };
+  const NOTA_FLEXIBILIDADE = "As datas de visita são estimativas. Podem ser adiadas ou antecipadas em até 5 dias úteis, sem prejuízo da eficácia do plano de manejo.";
+  
+  const PRAGAS_PRODUTOS = { 
+    baratas: { 
+      produtos: [
+        { nome: "K-Othrine WG 250", ativo: "Deltametrina", grupo: "Piretroide", anvisa: "3.2222.0011", dose: "20g / 10L" },
+        { nome: "Advion Barata Gel", ativo: "Indoxacarbe", grupo: "Oxiazina", anvisa: "3.0051.0022", dose: "Pronto para Uso" }
+      ] 
+    }, 
+    formigas: { 
+      produtos: [
+        { nome: "Optigard Formiga Gel", ativo: "Tiametoxam", grupo: "Neonicotinoide", anvisa: "3.0051.0015", dose: "Pronto para Uso" }
+      ] 
+    }, 
+    ratos: { 
+      produtos: [
+        { nome: "Racumin Bloco", ativo: "Cumatetralil", grupo: "Anticoagulante", anvisa: "3.2222.0025", dose: "Isca Localizada" },
+        { nome: "Final Bloco", ativo: "Flocoumafen", grupo: "Anticoagulante", anvisa: "3.0051.0031", dose: "Isca Localizada" }
+      ] 
+    },
+    escorpioes: {
+      produtos: [
+        { nome: "Fendona 60 SC", ativo: "Alfacipermetrina", grupo: "Piretroide", anvisa: "3.0051.0004", dose: "40ml / 10L" }
+      ]
+    },
+    aranhas: { produtos: [{ nome: "Fendona 60 SC", ativo: "Alfacipermetrina", grupo: "Piretroide", anvisa: "3.0051.0004", dose: "40ml / 10L" }] },
+    cupins: { produtos: [{ nome: "Termidor 25 CE", ativo: "Fipronil", grupo: "Fenilpirazol", anvisa: "3.0051.0008", dose: "75ml / 10L" }] },
+    mosquitos: { produtos: [{ nome: "Aqua K-Othrine", ativo: "Deltametrina", grupo: "Piretroide", anvisa: "3.2222.0040", dose: "100ml / 10L" }] },
+    pulgas: { produtos: [{ nome: "K-Othrine WG 250", ativo: "Deltametrina", grupo: "Piretroide", anvisa: "3.2222.0011", dose: "20g / 10L" }] }
+  };
+
+  let locaisArmadilhasTemp = [];
+  let statusChart = null;
+  let pendingVisitClientId = null;
+  let editandoClienteId = null;
+  let editandoVisitaNumero = null;
+
+  // ==================== CRIPTOGRAFIA ====================
+  function gerarChaveUnica(){ let chave=localStorage.getItem('rfk_encryption_key'); if(!chave){ chave=btoa(Date.now()+Math.random()+navigator.userAgent); localStorage.setItem('rfk_encryption_key',chave); } return chave; }
+  function criptografar(dados){ try{ const chave=gerarChaveUnica(); const texto=JSON.stringify(dados); let res=''; for(let i=0;i<texto.length;i++) res+=String.fromCharCode(texto.charCodeAt(i)^chave.charCodeAt(i%chave.length)); return btoa(res); }catch(e){ return null; } }
+  function descriptografar(dadosCript){ try{ if(!dadosCript) return null; const chave=gerarChaveUnica(); const texto=atob(dadosCript); let res=''; for(let i=0;i<texto.length;i++) res+=String.fromCharCode(texto.charCodeAt(i)^chave.charCodeAt(i%chave.length)); return JSON.parse(res); }catch(e){ return []; } }
+  function salvarDadosSeguros(dados){ const c=criptografar(dados); if(c){ localStorage.setItem(STORAGE_KEY,c); return true; } return false; }
+  function carregarDadosSeguros(){ const c=localStorage.getItem(STORAGE_KEY); if(!c) return []; const dados=descriptografar(c); return dados&&Array.isArray(dados)?dados:[]; }
+
+  // ==================== MIGRAÇÃO PARA DETALHES DE VISITAS ====================
+  function migrarDetalhesVisitas() {
+    let db = carregarDadosSeguros();
+    let modificado = false;
+    for (let c of db) {
+      if (!c.detalhesVisitas) {
+        c.detalhesVisitas = [];
+        const realizadas = c.realizadas || 0;
+        for (let i = 0; i < realizadas; i++) {
+          c.detalhesVisitas.push({
+            numero: i+1,
+            data: null,
+            aplicouQuimico: null
+          });
+        }
+        modificado = true;
+      }
+    }
+    if (modificado) salvarDadosSeguros(db);
+  }
+
+  // ==================== NÚMERO DE CONTROLE ====================
+  function formatarNumeroControle(ano, seq) { return `${seq.toString().padStart(3, '0')}/${ano}`; }
+  function obterProximoNumeroControle(ano, clientes) {
+    let maxSeq = 0;
+    for (let c of clientes) if (c.numeroControle && c.numeroControle.ano === ano && c.numeroControle.seq > maxSeq) maxSeq = c.numeroControle.seq;
+    return { ano, seq: maxSeq + 1 };
+  }
+  function atribuirNumeroControleParaClientesAntigos() {
+    let db = carregarDadosSeguros();
+    let modificado = false;
+    let grupos = {};
+    for (let c of db) {
+      let ano = c.inicio ? new Date(c.inicio + "T12:00:00").getFullYear() : new Date().getFullYear();
+      if (!grupos[ano]) grupos[ano] = [];
+      grupos[ano].push(c);
+    }
+    for (let ano in grupos) {
+      grupos[ano].sort((a,b) => a.id - b.id);
+      let seq = 1;
+      for (let c of grupos[ano]) {
+        if (!c.numeroControle || c.numeroControle.ano != parseInt(ano)) {
+          c.numeroControle = { ano: parseInt(ano), seq: seq++ };
+          modificado = true;
+        } else {
+          if (c.numeroControle.seq >= seq) seq = c.numeroControle.seq + 1;
+        }
+      }
+    }
+    if (modificado) { salvarDadosSeguros(db); renderizarLista(); atualizarDashboard(); }
+  }
+
+  // ==================== UTILITÁRIOS ====================
+  function mostrarToast(msg, tipo="info"){ 
+    const t=document.getElementById('toast'); 
+    t.textContent=msg; 
+    t.style.background=tipo==="success"?"#10b981":tipo==="error"?"#ef4444":"#1e293b"; 
+    t.classList.add('show'); 
+    setTimeout(()=>t.classList.remove('show'),3000); 
+  }
+  function mascaraTel(i){
+    let v=i.value.replace(/\D/g,'');
+    if(v.length<=10) v=v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
+    else v=v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
+    i.value=v.substring(0,16);
+  }
+  function mascaraCEP(i){let v=i.value.replace(/\D/g,'');if(v.length>5)v=v.replace(/^(\d{5})(\d)/,'$1-$2');i.value=v.substring(0,9);}
+  function formatarDataBR(d){if(!d)return'Não definida';const data=new Date(d+"T12:00:00");return`${data.getDate().toString().padStart(2,'0')}/${(data.getMonth()+1).toString().padStart(2,'0')}/${data.getFullYear()}`;}
+  function getPragaNome(p){const n={baratas:'Baratas',formigas:'Formigas',ratos:'Ratos/Camundongos',escorpioes:'Escorpiões',aranhas:'Aranhas',cupins:'Cupins',mosquitos:'Mosquitos',pulgas:'Pulgas'};return n[p]||p;}
+  function getTrabalhoNome(t){const n={pulverizacao:'Pulverização',gel:'Gel Inseticida',pó:'Pó Químico',armadilha:'Armadilhas',fumigacao:'Fumigação',integrado:'Controle Integrado'};return n[t]||t;}
+  function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+  
+  function getTotalVisitas(garantiaDias, freqDias){ 
+    let g = parseInt(garantiaDias) || 0, f = parseInt(freqDias) || 0;
+    if (f <= 0) return 0;
+    return Math.floor(g / f);
+  }
+  
+  function calcularTerminoContrato(){ 
+    const inicio=document.getElementById('f-inicio').value, garantia=parseInt(document.getElementById('f-garantia').value); 
+    if(inicio&&garantia){ const dataTermino=new Date(inicio+"T12:00:00"); dataTermino.setDate(dataTermino.getDate()+garantia); document.getElementById('f-termino').value=dataTermino.toISOString().split('T')[0]; } 
+    else document.getElementById('f-termino').value=''; 
+  }
+  
+  function onGarantiaChange(){ calcularTerminoContrato(); calcularProximaAutomatica(); }
+  
+  function validarFrequenciaInput() {
+    const fInput = document.getElementById('f-freq');
+    let val = parseInt(fInput.value) || 0;
+    if(val <= 0) {
+      mostrarToast("A frequência deve ser maior que zero! Reconfigurado para 30 dias.", "error");
+      fInput.value = "30";
+    }
+    calcularProximaAutomatica();
+  }
+
+  function validarRealizadasInput() {
+    let rInput = document.getElementById('f-realizadas');
+    let val = parseInt(rInput.value);
+    if (isNaN(val) || val < 0) rInput.value = 0;
+    calcularProximaAutomatica();
+  }
+
+  function validarDataInicio() {
+    const inicio = document.getElementById('f-inicio').value;
+    const hoje = new Date().toISOString().split('T')[0];
+    if (inicio && inicio > hoje) {
+      mostrarToast("Data de início não pode ser futura! Ajustada para hoje.", "error");
+      document.getElementById('f-inicio').value = hoje;
+      calcularProximaAutomatica();
+    }
+  }
+
+  function obterListaVisitas(cliente){ 
+    if(!cliente||!cliente.inicio) return [];
+    const inicio=new Date(cliente.inicio+"T12:00:00");
+    const freq=parseInt(cliente.freq);
+    if (freq <= 0) return [];
+    const totalVisitas=getTotalVisitas(cliente.garantia, cliente.freq);
+    const realizadas=cliente.realizadas||0;
+    let visitas=[];
+    for(let i=0;i<totalVisitas;i++){
+      const data=new Date(inicio);
+      data.setDate(inicio.getDate()+(i*freq));
+      const dataStr=formatarDataBR(data.toISOString().split('T')[0]);
+      let aplicou = null;
+      if (cliente.detalhesVisitas && cliente.detalhesVisitas[i]) {
+        aplicou = cliente.detalhesVisitas[i].aplicouQuimico;
+      }
+      visitas.push({
+        numero:i+1,
+        data:dataStr,
+        realizada:i<realizadas,
+        isProxima:i===realizadas&&realizadas<totalVisitas,
+        aplicouQuimico: aplicou
+      });
+    }
+    return visitas;
+  }
+  
+  function recalcularDatasCliente(c){ 
+    const di=c.inicio, fr=parseInt(c.freq), re=parseInt(c.realizadas);
+    if(di&&fr&&re>=0 && fr>0){
+      const dc=new Date(di+"T12:00:00");
+      dc.setDate(dc.getDate()+(re*fr));
+      const np=dc.toISOString().split('T')[0];
+      if(c.prox!==np){ c.prox=np; return true; }
+    } 
+    return false; 
+  }
+  
+  function getStatusCliente(c){ 
+    const hojeObj = new Date();
+    const hojeISO = `${hojeObj.getFullYear()}-${(hojeObj.getMonth()+1).toString().padStart(2,'0')}-${hojeObj.getDate().toString().padStart(2,'0')}`;
+    
+    const dataProxObj = new Date(c.prox + "T12:00:00");
+    const dataHojeObj = new Date(hojeISO + "T12:00:00");
+    const diff = Math.ceil((dataProxObj - dataHojeObj)/(1000*60*60*24));
+    
+    const total = getTotalVisitas(c.garantia, c.freq);
+    const realizadas = parseInt(c.realizadas) || 0;
+    
+    return {
+      isAtrasado: c.prox < hojeISO && !c.confirmado && realizadas < total && diff < -1,
+      isAtencao: (diff === -1 || diff === 0) && realizadas < total,
+      diffDias: diff,
+      totalVisitas: total,
+      restam: total - realizadas,
+      cicloCompleto: realizadas >= total
+    }; 
+  }
+  
+  function getPragasLista(p){if(!p||p.length===0)return'Não especificado';return p.map(p=>getPragaNome(p)).join(', ');}
+  
+  function calcularProximaAutomatica(){ 
+    const di=document.getElementById('f-inicio').value, fr=parseInt(document.getElementById('f-freq').value), re=parseInt(document.getElementById('f-realizadas').value)||0; 
+    calcularTerminoContrato(); 
+    if(di && fr > 0){ 
+      const dc=new Date(di+"T12:00:00"); 
+      dc.setDate(dc.getDate()+(re*fr)); 
+      document.getElementById('f-prox').value=dc.toISOString().split('T')[0]; 
+      const ga=parseInt(document.getElementById('f-garantia').value); 
+      const total=Math.floor(ga/fr); 
+      document.getElementById('info-visitas').innerHTML=`📊 Total de visitas: ${total} | Próxima: ${re+1}ª`; 
+    } else {
+      document.getElementById('info-visitas').innerHTML = '⚠️ Frequência inválida (deve ser maior que zero)';
+    }
+  }
+  
+  function validarDataProxima(){const dp=document.getElementById('f-prox').value; const hoje=new Date().toISOString().split('T')[0]; if(dp<hoje) mostrarToast("⚠️ Data no passado!","error");}
+  
+  function atualizarRecomendacao(){
+    const checks = document.querySelectorAll('#pragas-container input:checked');
+    const pragas = Array.from(checks).map(cb => cb.value);
+    const tipo = document.getElementById('f-tipoTrabalho').value;
+    const container = document.getElementById('recomendacao-container');
+    const texto = document.getElementById('recomendacao-texto');
+    const prodDiv = document.getElementById('produtos-container');
+    if(pragas.length === 0){ container.classList.add('hidden'); return; }
+    container.classList.remove('hidden');
+    let rec = `Diretriz de Aplicação:\n📋 Método Operacional: ${getTrabalhoNome(tipo)}`;
+    texto.textContent = rec;
+    prodDiv.innerHTML = '';
+    let prodsExibidos = new Set();
+    pragas.forEach(p => {
+      if(PRAGAS_PRODUTOS[p] && PRAGAS_PRODUTOS[p].produtos){
+        PRAGAS_PRODUTOS[p].produtos.forEach(pr => {
+          if(!prodsExibidos.has(pr.nome)){
+            prodsExibidos.add(pr.nome);
+            prodDiv.innerHTML += `<div class="bg-blue-900/10 text-blue-900 p-2 rounded-lg mt-2 text-[11px] border border-blue-200"><strong>🧪 ${pr.nome}</strong> | Ativo: ${pr.ativo} (${pr.grupo}) <br><span class="text-[9px] text-gray-600">Reg. ANVISA: ${pr.anvisa} | Dosagem: ${pr.dose}</span></div>`;
+          }
+        });
+      }
+    });
+  }
+
+  function getPragasSelecionadas(){return Array.from(document.querySelectorAll('#pragas-container input:checked')).map(cb=>cb.value);}
+  
+  function cancelarEdicao(){ 
+    const campos=['f-id','f-nome','f-tel','f-rua','f-numero','f-bairro','f-complemento','f-cep','f-tipoAnimais','f-obs','f-locaisArmadilhas']; 
+    campos.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); 
+    document.getElementById('f-cidade').value='Tonantins'; 
+    document.getElementById('f-moradores').value='1'; 
+    document.getElementById('f-criancas').value='0'; 
+    document.getElementById('f-animais').value='0'; 
+    document.getElementById('f-realizadas').value='1'; 
+    document.getElementById('f-tipoImovel').value='casa'; 
+    document.getElementById('f-ambiente').value='residencial'; 
+    document.getElementById('f-tipoTrabalho').value='pulverizacao'; 
+    document.getElementById('f-garantia').value='90'; 
+    document.getElementById('f-freq').value='30'; 
+    const hoje = new Date().toISOString().split('T')[0]; 
+    document.getElementById('f-inicio').value=hoje; 
+    document.querySelectorAll('#pragas-container input').forEach(cb=>cb.checked=false); 
+    document.querySelectorAll('input[name="tipoServico"]')[0].checked = true; 
+    document.getElementById('btn-cancelar-edit').classList.add('hidden'); 
+    document.getElementById('armadilhas-container').style.display='none'; 
+    locaisArmadilhasTemp=[]; 
+    document.getElementById('f-locaisArmadilhas').value='[]'; 
+    atualizarPreviewArmadilhas(); 
+    calcularTerminoContrato();
+    calcularProximaAutomatica(); 
+    document.getElementById('recomendacao-container').classList.add('hidden'); 
+    mostrarToast("Formulário limpo","info"); 
+  }
+
+  function verificarPragasRatos(){ const chk=document.querySelector('#pragas-container input[value="ratos"]'); const cont=document.getElementById('armadilhas-container'); if(chk&&chk.checked){ cont.style.display='block'; carregarLocaisArmadilhas(); }else{ cont.style.display='none'; document.getElementById('f-locaisArmadilhas').value='[]'; locaisArmadilhasTemp=[]; atualizarPreviewArmadilhas(); } }
+  function carregarLocaisArmadilhas(){ const saved=document.getElementById('f-locaisArmadilhas').value; try{ locaisArmadilhasTemp=(saved&&saved!=='[]')?JSON.parse(saved):[]; }catch(e){ locaisArmadilhasTemp=[]; } atualizarPreviewArmadilhas(); }
+  function atualizarPreviewArmadilhas(){ const preview=document.getElementById('locais-armadilhas-preview'); if(!preview)return; if(locaisArmadilhasTemp.length===0) preview.innerHTML='<span class="text-gray-400">Nenhum local registrado</span>'; else preview.innerHTML=locaisArmadilhasTemp.map((local,idx)=>`<div>📍 ${escapeHtml(local)} <span onclick="removerLocalArmadilha(${idx})" class="text-red-500 cursor-pointer">🗑️</span></div>`).join(''); }
+  function abrirModalArmadilhas(){ carregarLocaisArmadilhas(); const modal=document.getElementById('modal-armadilhas'); const lista=document.getElementById('lista-locais-modal'); lista.innerHTML=locaisArmadilhasTemp.map((l,i)=>`<div class="local-armadilha-item"><span>${escapeHtml(l)}</span><button class="text-red-500 font-bold" onclick="removerLocalDoModal(${i})">Remover</button></div>`).join('')||'<div class="text-gray-400">Nenhum local adicionado</div>'; modal.style.display='flex'; }
+  function fecharModalArmadilhas(){ document.getElementById('modal-armadilhas').style.display='none'; }
+  function adicionarLocalArmadilha(){ const input=document.getElementById('novo-local-input'); const novo=input.value.trim(); if(novo){ locaisArmadilhasTemp.push(novo); input.value=''; const lista=document.getElementById('lista-locais-modal'); lista.innerHTML=locaisArmadilhasTemp.map((l,i)=>`<div class="local-armadilha-item"><span>${escapeHtml(l)}</span><button class="text-red-500 font-bold" onclick="removerLocalDoModal(${i})">Remover</button></div>`).join(''); atualizarPreviewArmadilhas(); mostrarToast("Local adicionado!","success"); } }
+  function removerLocalDoModal(idx){ if(idx>=0&&idx<locaisArmadilhasTemp.length){ locaisArmadilhasTemp.splice(idx,1); const lista=document.getElementById('lista-locais-modal'); lista.innerHTML=locaisArmadilhasTemp.map((l,i)=>`<div class="local-armadilha-item"><span>${escapeHtml(l)}</span><button class="text-red-500 font-bold" onclick="removerLocalDoModal(${i})">Remover</button></div>`).join('')||'<div class="text-gray-400">Nenhum local adicionado</div>'; atualizarPreviewArmadilhas(); } }
+  function removerLocalArmadilha(idx){ if(idx>=0&&idx<locaisArmadilhasTemp.length){ locaisArmadilhasTemp.splice(idx,1); atualizarPreviewArmadilhas(); document.getElementById('f-locaisArmadilhas').value=JSON.stringify(locaisArmadilhasTemp); } }
+  function salvarLocaisArmadilhas(){ document.getElementById('f-locaisArmadilhas').value=JSON.stringify(locaisArmadilhasTemp); fecharModalArmadilhas(); atualizarPreviewArmadilhas(); mostrarToast("Locais salvos!","success"); }
+  function exportarBackupSeguro(){ const dados=carregarDadosSeguros(); const blob=new Blob([JSON.stringify({timestamp:new Date(),dados})],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`rfk_backup_${Date.now()}.json`; a.click(); mostrarToast("Backup gerado!","success"); }
+  function importarBackupSeguro(){ const input=document.getElementById('restore-file-input'); input.onchange=e=>{ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const backup=JSON.parse(ev.target.result); if(backup.dados&&Array.isArray(backup.dados)){ salvarDadosSeguros(backup.dados); mostrarToast("Restaurado!","success"); renderizarLista(); atualizarDashboard(); atribuirNumeroControleParaClientesAntigos(); migrarDetalhesVisitas(); }else throw new Error(); }catch(e){ mostrarToast("Arquivo inválido!","error"); } }; reader.readAsText(file); }; input.click(); }
+  function limparArmazenamentoSeguro(){ if(confirm("⚠️ ATENÇÃO: Isso apagará TODOS os clientes e histórico. Continuar?")){ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('rfk_encryption_key'); mostrarToast("Dados removidos!","success"); renderizarLista(); atualizarDashboard(); } }
+
+  // ==================== QR CODE MODAL ====================
+  function gerarQRCodeCliente() {
+    let urlLimpa = window.location.href.split('?')[0].split('#')[0];
+    const modal = document.getElementById('modal-qrcode');
+    const qrcodeDiv = document.getElementById('qrcode');
+    qrcodeDiv.innerHTML = '';
+    new QRCode(qrcodeDiv, { text: urlLimpa, width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+    modal.style.display = 'flex';
+  }
+  function fecharModalQR() { document.getElementById('modal-qrcode').style.display = 'none'; }
+
+  // ==================== REGISTRO QUÍMICO POR VISITA ====================
+  function perguntarAplicacaoQuimica(id) {
+    pendingVisitClientId = id;
+    document.getElementById('modal-quimico').style.display = 'flex';
+  }
+
+  function finalizarVisitaComQuimico(aplicou) {
+    if (!pendingVisitClientId) {
+      fecharModalQuimico();
+      return;
+    }
+    let db = carregarDadosSeguros();
+    const idx = db.findIndex(c => c.id == pendingVisitClientId);
+    if (idx !== -1) {
+      const c = db[idx];
+      const total = getTotalVisitas(c.garantia, c.freq);
+      if (c.realizadas < total && total > 0) {
+        c.realizadas++;
+        c.confirmado = true;
+        if (!c.detalhesVisitas) c.detalhesVisitas = [];
+        const novaVisitaNumero = c.realizadas;
+        const dataAtual = new Date().toISOString().split('T')[0];
+        c.detalhesVisitas.push({
+          numero: novaVisitaNumero,
+          data: dataAtual,
+          aplicouQuimico: aplicou
+        });
+        recalcularDatasCliente(c);
+        salvarDadosSeguros(db);
+        enviarMensagemVisitaConfirmada(c);
+        mostrarToast(`Visita ${c.realizadas}/${total} registrada${aplicou ? ' com aplicação química' : ' (somente inspeção)'}!`, "success");
+        renderizarLista();
+        atualizarDashboard();
+      } else if (total <= 0) {
+        mostrarToast("Ciclo inválido (frequência muito alta)", "error");
+      } else {
+        mostrarToast("Ciclo já finalizado!", "error");
+      }
+    }
+    fecharModalQuimico();
+    pendingVisitClientId = null;
+  }
+
+  function fecharModalQuimico() {
+    document.getElementById('modal-quimico').style.display = 'none';
+    pendingVisitClientId = null;
+  }
+
+  function confirmarVisita(id) {
+    perguntarAplicacaoQuimica(id);
+  }
+  
+  // ==================== EDITAR APLICAÇÃO QUÍMICA DE VISITAS ANTIGAS ====================
+  function editarAplicacaoQuimica(clienteId, numeroVisita) {
+    editandoClienteId = clienteId;
+    editandoVisitaNumero = numeroVisita;
+    document.getElementById('editar-visita-label').innerHTML = `Editando a <strong>${numeroVisita}ª visita</strong>`;
+    document.getElementById('modal-editar-quimico').style.display = 'flex';
+  }
+
+  function salvarEdicaoQuimico(valor) {
+    if (editandoClienteId === null || editandoVisitaNumero === null) {
+      fecharModalEditarQuimico();
+      return;
+    }
+    let db = carregarDadosSeguros();
+    const idx = db.findIndex(c => c.id == editandoClienteId);
+    if (idx !== -1) {
+      const c = db[idx];
+      if (!c.detalhesVisitas) c.detalhesVisitas = [];
+      const visitaIndex = editandoVisitaNumero - 1;
+      if (visitaIndex >= 0 && visitaIndex < c.detalhesVisitas.length) {
+        c.detalhesVisitas[visitaIndex].aplicouQuimico = valor;
+        if (!c.detalhesVisitas[visitaIndex].data) {
+          c.detalhesVisitas[visitaIndex].data = new Date().toISOString().split('T')[0];
+        }
+        salvarDadosSeguros(db);
+        mostrarToast(`Visita ${editandoVisitaNumero} atualizada!`, "success");
+        renderizarLista();
+        atualizarDashboard();
+      } else {
+        mostrarToast("Erro: índice de visita inválido", "error");
+      }
+    }
+    fecharModalEditarQuimico();
+  }
+
+  function fecharModalEditarQuimico() {
+    document.getElementById('modal-editar-quimico').style.display = 'none';
+    editandoClienteId = null;
+    editandoVisitaNumero = null;
+  }
+  
+  function enviarMensagemVisitaConfirmada(c){ 
+    const msg=`RFK CONTROLE DE PRAGAS\n\nVisita realizada com sucesso!\nCliente: ${c.nome}\nPróxima visita: ${formatarDataBR(c.prox)}\nObrigado pela confiança!`; 
+    const num=c.tel.replace(/\D/g,''); 
+    if(num.length>=10) window.open(`https://wa.me/55${num}?text=${encodeURIComponent(msg)}`,'_blank'); 
+  }
+  
+  function enviarHistoricoWhatsAppPorId(id){ 
+    const db=carregarDadosSeguros(); 
+    const c=db.find(c=>c.id==id); 
+    if(!c) return; 
+    let msg=`RFK CONTROLE DE PRAGAS\n\nCliente: ${c.nome}\nTel: ${c.tel}\nPróxima visita: ${formatarDataBR(c.prox)}\nProgresso: ${c.realizadas}/${getTotalVisitas(c.garantia,c.freq)}\nTipo: ${c.tipoServico === 'preventivo' ? 'Preventivo' : 'Tratamento'}\nControle: ${c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : 'N/A'}\n\n${DADOS_EMPRESA.nome}`; 
+    const num=c.tel.replace(/\D/g,''); 
+    if(num.length>=10) window.open(`https://wa.me/55${num}?text=${encodeURIComponent(msg)}`,'_blank'); 
+    else mostrarToast("Número inválido!","error"); 
+  }
+  
+  function tentarAcessoAdmin(){ const s=prompt("Senha admin:"); if(s===SENHA_MESTRA){ document.getElementById('view-cliente').classList.remove('page-active'); document.getElementById('view-admin').classList.add('page-active'); renderizarLista(); atualizarDashboard(); mostrarToast("Admin ativado","success"); }else if(s) mostrarToast("Senha incorreta!","error"); }
+  
+  function salvarCliente(){ 
+    try{ 
+      const id=document.getElementById('f-id').value||Date.now(); 
+      const nome=document.getElementById('f-nome').value.trim(); 
+      const tel=document.getElementById('f-tel').value.trim(); 
+      if(!nome||!tel){ mostrarToast("Nome e WhatsApp obrigatórios!","error"); return; }
+      
+      const garantia=parseInt(document.getElementById('f-garantia').value); 
+      const freq=parseInt(document.getElementById('f-freq').value); 
+      if (freq <= 0) { mostrarToast("Frequência deve ser maior que zero!","error"); return; }
+      
+      let realizadas = parseInt(document.getElementById('f-realizadas').value);
+      if (isNaN(realizadas) || realizadas < 0) realizadas = 0;
+      
+      const totalVisitas = getTotalVisitas(garantia, freq);
+      if (realizadas > totalVisitas) { 
+        mostrarToast(`Nº de visitas realizadas não pode exceder ${totalVisitas}. Ajustado.`,"error"); 
+        realizadas = totalVisitas; 
+        document.getElementById('f-realizadas').value = realizadas; 
+      }
+      
+      let locais=[]; 
+      try{ const saved=document.getElementById('f-locaisArmadilhas').value; if(saved&&saved!=='[]') locais=JSON.parse(saved); }catch(e){} 
+      const tipoServico = document.querySelector('input[name="tipoServico"]:checked').value; 
+      let db = carregarDadosSeguros(); 
+      let numeroControle = null; 
+      const idxExistente = db.findIndex(c=>c.id==id);
+      
+      if (idxExistente === -1) {
+        const inicio = document.getElementById('f-inicio').value;
+        let ano = inicio ? new Date(inicio + "T12:00:00").getFullYear() : new Date().getFullYear();
+        const proximo = obterProximoNumeroControle(ano, db);
+        numeroControle = { ano: proximo.ano, seq: proximo.seq };
+      } else {
+        numeroControle = db[idxExistente].numeroControle;
+      } 
+      
+      const cliente={ 
+        id:parseInt(id), nome, tel, 
+        rua:document.getElementById('f-rua').value, 
+        numero:document.getElementById('f-numero').value, 
+        bairro:document.getElementById('f-bairro').value, 
+        complemento:document.getElementById('f-complemento').value, 
+        cidade:document.getElementById('f-cidade').value||'Tonantins', 
+        cep:document.getElementById('f-cep').value, 
+        tipoImovel:document.getElementById('f-tipoImovel').value, 
+        ambiente:document.getElementById('f-ambiente').value, 
+        moradores:parseInt(document.getElementById('f-moradores').value)||1, 
+        criancas:parseInt(document.getElementById('f-criancas').value)||0, 
+        animais:parseInt(document.getElementById('f-animais').value)||0, 
+        tipoAnimais:document.getElementById('f-tipoAnimais').value, 
+        pragas:getPragasSelecionadas(), 
+        tipoTrabalho:document.getElementById('f-tipoTrabalho').value, 
+        garantia, freq, 
+        realizadas: realizadas,
+        inicio:document.getElementById('f-inicio').value, 
+        prox:document.getElementById('f-prox').value, 
+        obs:document.getElementById('f-obs').value, 
+        confirmado:false, 
+        termino:document.getElementById('f-termino').value, 
+        locaisArmadilhas:locais, 
+        tipoServico, 
+        numeroControle,
+        detalhesVisitas: (idxExistente !== -1 && db[idxExistente].detalhesVisitas) ? db[idxExistente].detalhesVisitas : []
+      }; 
+      
+      recalcularDatasCliente(cliente);
+      
+      if(idxExistente!==-1) db[idxExistente]=cliente; else db.push(cliente); 
+      salvarDadosSeguros(db); 
+      mostrarToast(`Cliente ${cliente.nome} salvo!`,"success"); 
+      renderizarLista(); atualizarDashboard(); cancelarEdicao(); 
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }catch(e){ console.error(e); mostrarToast("Erro ao salvar!","error"); } 
+  }
+  
+  function editarCliente(id){ 
+    const db=carregarDadosSeguros(); 
+    const c=db.find(c=>c.id==id); 
+    if(!c)return; 
+    document.getElementById('f-id').value=c.id; 
+    document.getElementById('f-nome').value=c.nome; 
+    document.getElementById('f-tel').value=c.tel; 
+    document.getElementById('f-rua').value=c.rua||''; 
+    document.getElementById('f-numero').value=c.numero||''; 
+    document.getElementById('f-bairro').value=c.bairro||''; 
+    document.getElementById('f-complemento').value=c.complemento||''; 
+    document.getElementById('f-cidade').value=c.cidade||'Tonantins'; 
+    document.getElementById('f-cep').value=c.cep||''; 
+    document.getElementById('f-tipoImovel').value=c.tipoImovel||'casa'; 
+    document.getElementById('f-ambiente').value=c.ambiente||'residencial'; 
+    document.getElementById('f-moradores').value=c.moradores||1; 
+    document.getElementById('f-criancas').value=c.criancas||0; 
+    document.getElementById('f-animais').value=c.animais||0; 
+    document.getElementById('f-tipoAnimais').value=c.tipoAnimais||''; 
+    document.querySelectorAll('#pragas-container input').forEach(cb=>cb.checked=false); 
+    if(c.pragas) c.pragas.forEach(p=>{const cb=document.querySelector(`#pragas-container input[value="${p}"]`); if(cb)cb.checked=true;}); 
+    document.getElementById('f-tipoTrabalho').value=c.tipoTrabalho||'pulverizacao'; 
+    document.getElementById('f-garantia').value=c.garantia; 
+    document.getElementById('f-freq').value=c.freq; 
+    document.getElementById('f-realizadas').value=c.realizadas; 
+    document.getElementById('f-inicio').value=c.inicio; 
+    document.getElementById('f-prox').value=c.prox; 
+    document.getElementById('f-obs').value=c.obs||''; 
+    if(c.locaisArmadilhas&&c.locaisArmadilhas.length){ 
+      locaisArmadilhasTemp=[...c.locaisArmadilhas]; 
+      document.getElementById('f-locaisArmadilhas').value=JSON.stringify(locaisArmadilhasTemp); 
+      atualizarPreviewArmadilhas(); 
+      if(c.pragas&&c.pragas.includes('ratos')) document.getElementById('armadilhas-container').style.display='block'; 
+    }else{ 
+      locaisArmadilhasTemp=[]; 
+      document.getElementById('f-locaisArmadilhas').value='[]'; 
+      atualizarPreviewArmadilhas(); 
+    } 
+    const tipoRadio = document.querySelector(`input[name="tipoServico"][value="${c.tipoServico || 'tratamento'}"]`); 
+    if(tipoRadio) tipoRadio.checked = true; 
+    calcularTerminoContrato();
+    calcularProximaAutomatica(); 
+    atualizarRecomendacao(); 
+    verificarPragasRatos(); 
+    document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    mostrarToast("Editando cliente...","info"); 
+  }
+  
+  function deletarCliente(id){ if(confirm("Tem certeza que deseja excluir este cliente permanentemente?")){ let db=carregarDadosSeguros(); db=db.filter(c=>c.id!=id); salvarDadosSeguros(db); renderizarLista(); atualizarDashboard(); mostrarToast("Removido!","success"); } }
+  
+  function acessoCliente(telefonePreenchido = null) {
+    let tel = telefonePreenchido || document.getElementById('input-c-tel').value.replace(/\D/g,'');
+    if(!tel || tel.length<10){ mostrarToast("WhatsApp inválido!","error"); return; }
+    const db=carregarDadosSeguros();
+    const c=db.find(c=>c.tel.replace(/\D/g,'')===tel);
+    const box=document.getElementById('box-cliente-result');
+    if(!c){ box.innerHTML='<div class="bg-red-100 p-4 rounded-xl mt-4 text-center">❌ Nenhum contrato encontrado com este WhatsApp.</div>'; return; }
+    const status=getStatusCliente(c);
+    box.innerHTML=`
+      <div class="bg-white p-4 rounded-xl shadow mt-4">
+        <h3 class="font-bold">${escapeHtml(c.nome)}</h3>
+        <p>📞 ${c.tel}</p>
+        <p>📅 Próxima visita: ${formatarDataBR(c.prox)}</p>
+        <p>✅ ${c.realizadas} de ${status.totalVisitas} visitas realizadas</p>
+        <p>🔚 Término da garantia: ${formatarDataBR(c.termino)}</p>
+        <p>🛡️ Tipo: ${c.tipoServico === 'preventivo' ? 'Preventivo' : 'Tratamento'}</p>
+        <p>🏷️ Controle: ${c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : 'N/A'}</p>
+        <div class="flex gap-2 mt-3 flex-wrap">
+          <button onclick="enviarHistoricoWhatsAppPorId(${c.id})" class="bg-green-600 text-white px-4 py-2 rounded text-sm flex-1">📱 WhatsApp</button>
+          <button onclick="exportarPDFPorId(${c.id}, true)" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm flex-1">📄 Baixar Certificado</button>
+        </div>
+      </div>`;
+    if(telefonePreenchido) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  
+  function renderizarLista(){ 
+    const db=carregarDadosSeguros(); 
+    const container=document.getElementById('lista-clientes'); 
+    if(!container)return; 
+    if(db.length===0){ container.innerHTML='<div class="bg-white p-8 text-center text-gray-400 rounded-2xl">Nenhum cliente cadastrado.</div>'; return; } 
+    const html=db.map(c=>{ 
+      const status=getStatusCliente(c); 
+      let classCard="card-pasta pasta-em-dia"; 
+      if(status.isAtrasado)classCard="card-pasta pasta-atraso"; 
+      else if(status.isAtencao)classCard="card-pasta pasta-atencao"; 
+      else if(status.cicloCompleto)classCard="card-pasta pasta-confirmada"; 
+      const visitas=obterListaVisitas(c); 
+      const tipoIcon = c.tipoServico === 'preventivo' ? '🛡️' : '🩺'; 
+      const numControle = c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : '---'; 
+      const progressoPercent = status.totalVisitas > 0 ? (c.realizadas / status.totalVisitas * 100) : 0;
+      return `<div class="${classCard}">${status.isAtrasado?'<div class="sinal-alerta">ATRASADO</div>':(status.isAtencao?'<div class="sinal-alerta" style="background:#f59e0b;">ATENÇÃO</div>':'')}<div class="flex justify-between flex-wrap gap-2"><div><h3 class="font-bold">${escapeHtml(c.nome)} <span class="text-xs ${c.tipoServico === 'preventivo' ? 'text-purple-600' : 'text-blue-600'}">${tipoIcon}</span><span class="numero-controle">#${numControle}</span></h3><p class="text-xs">${c.tel}</p><p class="text-xs">📅 Prox: ${formatarDataBR(c.prox)}</p><p class="text-xs">📊 ${c.realizadas}/${status.totalVisitas}</p></div><div class="flex flex-col gap-1"><button onclick="confirmarVisita(${c.id})" class="btn-pasta bg-green-500 text-white">✅ Visita</button><button onclick="editarCliente(${c.id})" class="btn-pasta bg-blue-500 text-white">✏️ Editar</button><button onclick="deletarCliente(${c.id})" class="btn-pasta bg-red-500 text-white">🗑️ Excluir</button><button onclick="exportarPDFPorId(${c.id}, false)" class="btn-pasta bg-indigo-500 text-white">📄 PDF</button><button onclick="enviarHistoricoWhatsAppPorId(${c.id})" class="btn-pasta bg-emerald-500 text-white">📱 WhatsApp</button></div></div><div class="historico-card mt-2"><div class="historico-header"><h4>📋 Histórico de Visitas</h4><div class="progresso-wrapper"><span>${c.realizadas}/${status.totalVisitas}</span><div class="progresso-barra-container"><div class="progresso-barra" style="width:${progressoPercent}%"></div></div></div></div><div class="lista-visitas">${visitas.map(v=>`<div class="visita-item"><span class="visita-numero">${v.numero}ª</span><span class="visita-data">${v.data}</span><span class="status-label ${v.realizada?'status-realizada':(v.isProxima?'status-proxima':'status-pendente')}">${v.realizada?'✅ Realizada':(v.isProxima?'⏳ Próxima':'📅 Agendada')}</span>${v.aplicouQuimico !== undefined && v.aplicouQuimico !== null ? `<span class="btn-quimico">${v.aplicouQuimico ? '💊 Químico' : '🧪 Inspeção'}</span>` : '<span class="btn-quimico" style="background:#9ca3af;">❓ Não informado</span>'}<span class="editar-visita" onclick="editarAplicacaoQuimica(${c.id}, ${v.numero})" title="Editar aplicação química">✏️ Editar</span></div>`).join('')}</div>${c.realizadas>=status.totalVisitas?'<div class="mensagem-conclusao">🏆 Ciclo de visitas concluído!</div>':''}</div></div>`; 
+    }).join(''); 
+    container.innerHTML=html; 
+  }
+  
+  // ==================== QR CODE PARA PDF ====================
+  function gerarQRCodeDataURL(texto, largura = 200) {
+    return new Promise((resolve, reject) => {
+      QRCode.toDataURL(texto, { errorCorrectionLevel: 'H', margin: 2, width: largura }, (err, url) => {
+        if (err) reject(err);
+        else resolve(url);
+      });
+    });
+  }
+
+  // ==================== PDF COM HISTÓRICO REAL PREENCHIDO ====================
+  async function exportarPDFPorId(id, isCliente = false) {
+    const db = carregarDadosSeguros();
+    const cliente = db.find(c => c.id == id);
+    if (!cliente) { mostrarToast("Cliente não encontrado!", "error"); return; }
+    if (!cliente.freq || cliente.freq <= 0) cliente.freq = 30;
+    if (!cliente.inicio) cliente.inicio = new Date().toISOString().split('T')[0];
+    if (cliente.realizadas === undefined || cliente.realizadas === null) cliente.realizadas = 0;
+
+    const loadingDiv = document.getElementById('pdf-loading');
+    const statusMsg = document.getElementById('pdf-status');
+    loadingDiv.style.display = 'flex';
+    statusMsg.innerText = "Preparando dados...";
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const marginLeft = 15, marginRight = 15, contentWidth = 180;
+      let y = 15;
+
+      let urlLimpa = window.location.href.split('?')[0].split('#')[0];
+      const telNumeros = cliente.tel.replace(/\D/g, '');
+      const qrUrl = `${urlLimpa}?tel=${telNumeros}`;
+      const qrDataUrl = await gerarQRCodeDataURL(qrUrl, 250);
+
+      function writeText(text, x, currentY, maxWidth, fontSize = 10, fontStyle = 'normal') {
+        doc.setFontSize(fontSize);
+        doc.setFont('helvetica', fontStyle);
+        const lines = doc.splitTextToSize(text, maxWidth);
+        doc.text(lines, x, currentY);
+        return currentY + (lines.length * (fontSize * 0.38));
+      }
+
+      const desenharRodape = (docInstance, paginaAtual, totalPaginas) => {
+        const finalY = 287;
+        docInstance.setFontSize(7);
+        docInstance.setFont('helvetica', 'normal');
+        docInstance.setTextColor(71, 85, 105);
+        docInstance.text(`RFK SERVIÇO LTDA | CNPJ: ${DADOS_EMPRESA.cnpj}`, marginLeft, finalY - 8);
+        docInstance.text(`Fone Plantão: ${DADOS_EMPRESA.telefone} | Endereço Operacional: ${DADOS_EMPRESA.endereco}`, marginLeft, finalY - 4);
+        docInstance.text(`Documento autenticado eletronicamente em ${new Date().toLocaleString()}`, marginLeft, finalY);
+        docInstance.text(`Página ${paginaAtual} de ${totalPaginas}`, marginLeft + contentWidth, finalY, { align: 'right' });
+      };
+
+      // CABEÇALHO
+      doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+      doc.text('RFK SERVIÇO LTDA', marginLeft, y); y += 5;
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+      doc.text('Certificado de Execução de Controle Vetorial e de Pragas Urbanas', marginLeft, y); y += 4;
+      doc.setFontSize(8.5);
+      doc.text(`${DADOS_EMPRESA.nome} | CNPJ: ${DADOS_EMPRESA.cnpj}`, marginLeft, y); y += 5;
+      doc.line(marginLeft, y, marginLeft + contentWidth, y); y += 5;
+      let numControle = cliente.numeroControle ? formatarNumeroControle(cliente.numeroControle.ano, cliente.numeroControle.seq) : 'Não atribuído';
+      doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+      doc.text(`Ordem de Serviço / Controle Interno: #${numControle}`, marginLeft, y); y += 5;
+
+      // DADOS DO CLIENTE
+      doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
+      doc.text('DADOS DO ESTABELECIMENTO / CLIENTE', marginLeft, y); y += 4;
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+      const enderecoCompleto = `${cliente.rua || ''}, ${cliente.numero || ''} ${cliente.bairro ? `- ${cliente.bairro}` : ''} ${cliente.complemento ? `, ${cliente.complemento}` : ''} - ${cliente.cidade || 'Tonantins'} ${cliente.cep ? `CEP: ${cliente.cep}` : ''}`;
+      const tipoImovelNome = { casa: 'Casa', comercio: 'Comércio', apartamento: 'Apartamento', sitio: 'Sítio/Chácara', industria: 'Indústria' }[cliente.tipoImovel] || cliente.tipoImovel;
+      doc.text(`Nome/Razão Social: ${cliente.nome}`, marginLeft, y);
+      doc.text(`WhatsApp: ${cliente.tel}`, marginLeft + 110, y);
+      y += 4;
+      y = writeText(`Endereço: ${enderecoCompleto}`, marginLeft, y, contentWidth, 8.5, 'normal');
+      doc.text(`Segmento: ${tipoImovelNome} / Ambiente: ${cliente.ambiente}`, marginLeft, y);
+      doc.text(`Composição Local: ${cliente.moradores} Hab., ${cliente.criancas || 0} Crianças (<6a), ${cliente.animais || 0} Pets ${cliente.tipoAnimais ? `(${cliente.tipoAnimais})` : ''}`, marginLeft + 75, y, { maxWidth: contentWidth - 75 });
+      y += 6;
+
+      // ESPECIFICAÇÕES TÉCNICAS
+      doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
+      doc.text('ESPECIFICAÇÕES TÉCNICAS DO MANEJO QUÍMICO', marginLeft, y); y += 4;
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+      doc.text(`Pragas Alvo: ${getPragasLista(cliente.pragas || [])}`, marginLeft, y); y += 4;
+      doc.text(`Técnica Operacional: ${getTrabalhoNome(cliente.tipoTrabalho)}`, marginLeft, y); y += 5;
+
+      // Tabela de produtos
+      const tabelaProdutosHead = [['Produto Comercial', 'Princípio Ativo / Grupo', 'Reg. ANVISA', 'Dosagem Alvo']];
+      const tabelaProdutosBody = [];
+      let produtosSet = new Set();
+      if (cliente.pragas && cliente.pragas.length) {
+        cliente.pragas.forEach(p => {
+          if (PRAGAS_PRODUTOS[p] && PRAGAS_PRODUTOS[p].produtos) {
+            PRAGAS_PRODUTOS[p].produtos.forEach(pr => {
+              if (!produtosSet.has(pr.nome)) {
+                produtosSet.add(pr.nome);
+                tabelaProdutosBody.push([pr.nome, `${pr.ativo} (${pr.grupo})`, pr.anvisa, pr.dose]);
+              }
+            });
+          }
+        });
+      }
+      if (tabelaProdutosBody.length > 0) {
+        doc.autoTable({
+          startY: y,
+          head: tabelaProdutosHead,
+          body: tabelaProdutosBody,
+          theme: 'grid',
+          headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+          bodyStyles: { fontSize: 7.5 },
+          margin: { left: marginLeft, right: marginRight },
+          styles: { cellPadding: 1.5 },
+          didDrawPage: (data) => { 
+            const pg = doc.internal.getCurrentPageInfo().pageNumber;
+            const total = doc.internal.getNumberOfPages(); 
+            desenharRodape(doc, pg, total); 
+          }
+        });
+        y = doc.lastAutoTable.finalY + 4;
+      }
+
+      // Objetivo do escopo
+      const servico = cliente.tipoServico || 'tratamento';
+      if(y + 12 > 275) { doc.addPage(); y = 15; }
+      doc.setFillColor(240, 248, 255);
+      doc.rect(marginLeft, y - 2, contentWidth, 7, 'F');
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 41, 59);
+      doc.text('Objetivo do Escopo Técnico:', marginLeft + 2, y + 2.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(servico === 'tratamento' ? '[ X ] Choque/Tratamento Crítico    [   ] Manutenção Preventiva' : '[   ] Choque/Tratamento Crítico    [ X ] Manutenção Preventiva', marginLeft + 50, y + 2.5);
+      y += 8;
+
+      // Armadilhas
+      if (cliente.locaisArmadilhas && cliente.locaisArmadilhas.length) {
+        const alturaBox = 5 + (cliente.locaisArmadilhas.length * 3.5);
+        if(y + alturaBox > 275) { doc.addPage(); y = 15; }
+        doc.setFillColor(254, 243, 199);
+        doc.rect(marginLeft, y - 2, contentWidth, alturaBox, 'F');
+        doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+        doc.text('MAPEAMENTO FÍSICO DE DISPOSITIVOS (ARMADILHAS):', marginLeft + 2, y + 1.5); y += 3.5;
+        doc.setFont('helvetica', 'normal');
+        cliente.locaisArmadilhas.forEach((l, idx) => { doc.text(`   📍 Ponto de Controle ${idx + 1}: ${l.substring(0, 75)}`, marginLeft + 2, y + 1.5); y += 3.5; });
+        y += 3.5;
+      }
+
+      // Cronograma
+      const status = getStatusCliente(cliente);
+      const realizadas = cliente.realizadas || 0;
+      const percentual = status.totalVisitas > 0 ? Math.round((realizadas / status.totalVisitas) * 100) : 0;
+
+      if(y + 25 > 275) { doc.addPage(); y = 15; }
+      doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
+      doc.text('CRONOGRAMA E CICLO DE VISTORIAS', marginLeft, y); y += 4;
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+      doc.text(`Data Inicial: ${formatarDataBR(cliente.inicio)}`, marginLeft, y);
+      doc.text(`Vigência Técnico: ${cliente.garantia} dias`, marginLeft + 55, y);
+      doc.text(`Periodicidade: Integral a cada ${cliente.freq} dias`, marginLeft + 110, y); y += 4;
+      doc.text(`Fim de Vigência: ${formatarDataBR(cliente.termino)}`, marginLeft, y);
+      doc.text(`Evolução Corrente: ${realizadas}/${status.totalVisitas} (${percentual}%)`, marginLeft + 55, y);
+      doc.text(`Próxima Intervenção: ${formatarDataBR(cliente.prox)}`, marginLeft + 110, y); y += 5;
+
+      // Barra de progresso
+      doc.setFillColor(226, 232, 240);
+      doc.rect(marginLeft, y - 2, contentWidth, 2, 'F');
+      doc.setFillColor(59, 130, 246);
+      doc.rect(marginLeft, y - 2, (contentWidth * percentual / 100), 2, 'F'); y += 4;
+
+      // Tabela de visitas com histórico REAL preenchido
+      const visitas = obterListaVisitas(cliente);
+      const tableData = visitas.map(v => {
+        let statusTexto = v.realizada ? 'Executada' : (v.isProxima ? 'Planejada (Próxima)' : 'Agendada');
+        let aplicacaoTexto = '';
+        if (v.aplicouQuimico === true) aplicacaoTexto = '[X] Sim';
+        else if (v.aplicouQuimico === false) aplicacaoTexto = '[X] Não';
+        else aplicacaoTexto = '[ ]';
+        return [`${v.numero}ª Visita`, v.data, statusTexto, aplicacaoTexto];
+      });
+      doc.autoTable({
+        startY: y,
+        head: [['Etapa', 'Data Estipulada', 'Status', 'Aplicação Química']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 35 }, 2: { cellWidth: 40 }, 3: { cellWidth: 45, halign: 'left' } },
+        margin: { left: marginLeft, right: marginRight },
+        styles: { cellPadding: 1.5 },
+        didDrawPage: (data) => { 
+          const pg = doc.internal.getCurrentPageInfo().pageNumber;
+          const total = doc.internal.getNumberOfPages(); 
+          desenharRodape(doc, pg, total); 
+        }
+      });
+      y = doc.lastAutoTable.finalY + 4;
+
+      // Nota de flexibilidade
+      const notaLines = doc.splitTextToSize(NOTA_FLEXIBILIDADE, contentWidth - 70);
+      const alturaNota = Math.max(6, 2 + (notaLines.length * 3.5));
+      if(y + alturaNota > 275) { doc.addPage(); y = 15; }
+      doc.setFillColor(254, 243, 199);
+      doc.rect(marginLeft, y - 2, contentWidth, alturaNota, 'F');
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
+      doc.text('DIRETRIZ DE TOLERÂNCIA DE AGENDAMENTO:', marginLeft + 2, y + 2);
+      doc.setFont('helvetica', 'normal');
+      doc.text(notaLines, marginLeft + 68, y + 2);
+      y += alturaNota + 3;
+
+      // Observações
+      if (cliente.obs) {
+        const obsLines = doc.splitTextToSize(`ANOTAÇÕES COMPLEMENTARES DE CAMPO: ${cliente.obs}`, contentWidth - 4);
+        const alturaObs = 4 + (obsLines.length * 3.5);
+        if(y + alturaObs > 275) { doc.addPage(); y = 15; }
+        doc.setFillColor(241, 245, 249);
+        doc.rect(marginLeft, y - 2, contentWidth, alturaObs, 'F');
+        doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+        doc.text(obsLines, marginLeft + 2, y + 1.5);
+        y += alturaObs + 3;
+      }
+
+      // Instruções de segurança
+      if(y + 18 > 275) { doc.addPage(); y = 15; }
+      doc.setFillColor(254, 242, 242);
+      doc.rect(marginLeft, y - 2, contentWidth, 15, 'F');
+      doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(153, 27, 27);
+      doc.text('⚠️ SEGURANÇA E INSTRUÇÕES MÉDICAS MANDATÓRIAS:', marginLeft + 2, y + 1.5);
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
+      doc.text('- Manter o local isolado por no mínimo 06 horas após a aplicação (Crianças, idosos e pets expandir para 12h).', marginLeft + 2, y + 5);
+      doc.text('- Em caso de suspeita de intoxicação, ligar para o Centro de Informação Toxicológica (CIT): 0800-722-6001.', marginLeft + 2, y + 8);
+      doc.text('- Promover a ventilação ampla do imóvel abrindo janelas e portas 1 hora antes do reingresso definitivo.', marginLeft + 2, y + 11);
+      y += 18;
+
+      // ASSINATURAS + QR CODE
+      if (y + 35 > 275) { doc.addPage(); y = 15; }
+
+      doc.line(marginLeft, y, marginLeft + 70, y);
+      doc.line(marginLeft + 100, y, marginLeft + contentWidth, y);
+      y += 4;
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+      doc.text('RFK SERVIÇO LTDA', marginLeft + 15, y);
+      doc.text('ASSINATURA DO CLIENTE / FIEL', marginLeft + 110, y);
+      y += 5;
+
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text('Resp. Técnico: _________________________', marginLeft + 2, y);
+      doc.text('Registro: _______________________________', marginLeft + 2, y + 4);
+      y += 12;
+
+      const qrWidth = 32, qrHeight = 32;
+      doc.addImage(qrDataUrl, 'PNG', marginLeft + contentWidth - qrWidth - 5, y - 16, qrWidth, qrHeight);
+      doc.setFontSize(6.5);
+      doc.text('Escaneie para acessar seu contrato online', marginLeft + contentWidth - qrWidth - 5, y + 18, { align: 'center' });
+
+      const paginaAtual = doc.internal.getCurrentPageInfo().pageNumber;
+      const totalPaginas = doc.internal.getNumberOfPages();
+      desenharRodape(doc, paginaAtual, totalPaginas);
+
+      doc.save(`Relatorio_RFK_${cliente.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+      mostrarToast("Certificado PDF gerado com sucesso!", "success");
+    } catch (err) {
+      console.error(err);
+      mostrarToast("Erro ao gerar PDF: " + err.message, "error");
+    } finally {
+      loadingDiv.style.display = 'none';
+    }
+  }
+
+  // ==================== DASHBOARD ====================
+  function atualizarDashboard() {
+    const db = carregarDadosSeguros();
+    const hojeObj = new Date();
+    const hojeISO = `${hojeObj.getFullYear()}-${(hojeObj.getMonth()+1).toString().padStart(2,'0')}-${hojeObj.getDate().toString().padStart(2,'0')}`;
+    
+    const proximaSemanaObj = new Date(); 
+    proximaSemanaObj.setDate(hojeObj.getDate() + 7);
+    const proximaSemanaISO = `${proximaSemanaObj.getFullYear()}-${(proximaSemanaObj.getMonth()+1).toString().padStart(2,'0')}-${proximaSemanaObj.getDate().toString().padStart(2,'0')}`;
+    
+    let total = db.length, atrasados = 0, visitasHoje = 0, visitasSemana = 0;
+    db.forEach(c => {
+      const status = getStatusCliente(c);
+      if (status.isAtrasado) atrasados++;
+      if (c.prox === hojeISO) visitasHoje++;
+      if (c.prox >= hojeISO && c.prox <= proximaSemanaISO) visitasSemana++;
+    });
+    document.getElementById('dashboard-total').innerText = total;
+    document.getElementById('dashboard-atraso').innerText = atrasados;
+    document.getElementById('dashboard-hoje').innerText = visitasHoje;
+    document.getElementById('dashboard-semana').innerText = visitasSemana;
+    
+    let emDia = 0, atencao = 0, atrasado = 0;
+    db.forEach(c => {
+      const status = getStatusCliente(c);
+      if (status.isAtrasado) atrasado++;
+      else if (status.isAtencao) atencao++;
+      else emDia++;
+    });
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    if (statusChart) statusChart.destroy();
+    statusChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['Em dia', 'Atenção', 'Atrasado'], datasets: [{ data: [emDia, atencao, atrasado], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+  }
+  
+  // ==================== INICIALIZAÇÃO ====================
+  document.addEventListener('DOMContentLoaded', () => {
+    migrarDetalhesVisitas();
+    const urlParams = new URLSearchParams(window.location.search);
+    const telParam = urlParams.get('tel');
+    if (telParam && telParam.length >= 10) {
+      document.getElementById('view-admin').classList.remove('page-active');
+      document.getElementById('view-cliente').classList.add('page-active');
+      document.getElementById('input-c-tel').value = telParam;
+      acessoCliente(telParam);
+    } else {
+      document.getElementById('view-cliente').classList.add('page-active');
+    }
+    document.getElementById('f-inicio').value = new Date().toISOString().split('T')[0];
+    calcularTerminoContrato();
+    calcularProximaAutomatica();
+    renderizarLista();
+    atualizarDashboard();
+    atribuirNumeroControleParaClientesAntigos();
+  });
+</script>
+</body>
+</html>
