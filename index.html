@@ -1112,6 +1112,7 @@
         doc.text(`Página ${currentPage} de ${totalPages}`, marginLeft + contentWidth, finalY, { align: 'right' });
       };
 
+      // CABEÇALHO
       doc.setFontSize(15); doc.setFont('helvetica', 'bold');
       doc.text('RFK SERVIÇO LTDA', marginLeft, y); y += 5;
       doc.setFontSize(10); doc.setFont('helvetica', 'normal');
@@ -1123,6 +1124,7 @@
       doc.setFontSize(10); doc.setFont('helvetica', 'bold');
       doc.text(`Ordem de Serviço / Controle Interno: #${numControle}`, marginLeft, y); y += 5;
 
+      // DADOS DO CLIENTE
       doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
       doc.text('DADOS DO ESTABELECIMENTO / CLIENTE', marginLeft, y); y += 4;
       doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
@@ -1136,6 +1138,7 @@
       doc.text(`Composição Local: ${cliente.moradores} Hab., ${cliente.criancas || 0} Crianças (<6a), ${cliente.animais || 0} Pets ${cliente.tipoAnimais ? `(${cliente.tipoAnimais})` : ''}`, marginLeft + 75, y, { maxWidth: contentWidth - 75 });
       y += 6;
 
+      // INFORMAÇÕES CONTRATUAIS
       const valorFormatado = cliente.valor ? `R$ ${cliente.valor.toFixed(2).replace('.', ',')}` : 'Não informado';
       const formaDesc = { dinheiro:'Dinheiro', pix:'PIX', cartao_credito:'Cartão Crédito', cartao_debito:'Cartão Débito', boleto:'Boleto', transferencia:'Transferência', outros:'Outros' }[cliente.formaPagamento] || cliente.formaPagamento;
       doc.setFontSize(9); doc.setFont('helvetica', 'bold');
@@ -1145,12 +1148,14 @@
       doc.text(`Forma de Pagamento: ${formaDesc}`, marginLeft + 80, y);
       y += 6;
 
+      // ESPECIFICAÇÕES TÉCNICAS
       doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
       doc.text('ESPECIFICAÇÕES TÉCNICAS DO MANEJO QUÍMICO', marginLeft, y); y += 4;
       doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
       doc.text(`Pragas Alvo: ${getPragasLista(cliente.pragas || [])}`, marginLeft, y); y += 4;
       doc.text(`Técnica Operacional: ${getTrabalhoNome(cliente.tipoTrabalho)}`, marginLeft, y); y += 5;
 
+      // TABELA DE PRODUTOS
       const tabelaProdutosHead = [['Produto Comercial', 'Princípio Ativo / Grupo', 'Reg. ANVISA', 'Dosagem Alvo']];
       const tabelaProdutosBody = [];
       let produtosSet = new Set();
@@ -1181,6 +1186,7 @@
         y = doc.lastAutoTable.finalY + 4;
       }
 
+      // OBJETIVO DO ESCOPO
       const servico = cliente.tipoServico || 'tratamento';
       if(y + 12 > 270) { doc.addPage(); y = 15; desenharRodape(); }
       doc.setFillColor(240, 248, 255);
@@ -1192,6 +1198,7 @@
       doc.text(servico === 'tratamento' ? '[ X ] Choque/Tratamento Crítico    [   ] Manutenção Preventiva' : '[   ] Choque/Tratamento Crítico    [ X ] Manutenção Preventiva', marginLeft + 50, y + 2.5);
       y += 8;
 
+      // ARMADILHAS
       if (cliente.locaisArmadilhas && cliente.locaisArmadilhas.length) {
         const alturaBox = 5 + (cliente.locaisArmadilhas.length * 3.5);
         if(y + alturaBox > 270) { doc.addPage(); y = 15; desenharRodape(); }
@@ -1204,6 +1211,7 @@
         y += 3.5;
       }
 
+      // CRONOGRAMA
       const status = getStatusCliente(cliente);
       const realizadas = cliente.realizadas || 0;
       const percentual = status.totalVisitas > 0 ? Math.round((realizadas / status.totalVisitas) * 100) : 0;
@@ -1219,20 +1227,27 @@
       doc.text(`Evolução Corrente: ${realizadas}/${status.totalVisitas} (${percentual}%)`, marginLeft + 55, y);
       doc.text(`Próxima Intervenção: ${formatarDataBR(cliente.prox)}`, marginLeft + 110, y); y += 5;
 
+      // BARRA DE PROGRESSO
       doc.setFillColor(226, 232, 240);
       doc.rect(marginLeft, y - 2, contentWidth, 2, 'F');
       doc.setFillColor(59, 130, 246);
       doc.rect(marginLeft, y - 2, (contentWidth * percentual / 100), 2, 'F'); y += 4;
 
+      // TABELA DE VISITAS
       const visitas = obterListaVisitas(cliente);
       const tableData = visitas.map(v => {
         let statusTexto = v.realizada ? 'Executada' : (v.isProxima ? 'Planejada (Próxima)' : 'Agendada');
         let aplicacaoTexto = '';
-        if (v.aplicouQuimico === true) aplicacaoTexto = '💊 [X] Sim';
-        else if (v.aplicouQuimico === false) aplicacaoTexto = '🧪 [X] Inspeção';
-        else aplicacaoTexto = '[ ] Não especificado';
+        if (v.aplicouQuimico === true) {
+          aplicacaoTexto = '[X] Aplicação química';
+        } else if (v.aplicouQuimico === false) {
+          aplicacaoTexto = '[X] Inspeção (sem químico)';
+        } else {
+          aplicacaoTexto = '[ ] Não informado';
+        }
         return [`${v.numero}ª Visita`, v.data, statusTexto, aplicacaoTexto];
       });
+      
       doc.autoTable({
         startY: y,
         head: [['Etapa', 'Data Estipulada', 'Status', 'Manejo Químico']],
@@ -1240,13 +1255,14 @@
         theme: 'striped',
         headStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 8 },
         bodyStyles: { fontSize: 8 },
-        columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 35 }, 2: { cellWidth: 40 }, 3: { cellWidth: 45, halign: 'left' } },
+        columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 35 }, 2: { cellWidth: 40 }, 3: { cellWidth: 50, halign: 'left' } },
         margin: { left: marginLeft, right: marginRight },
         styles: { cellPadding: 1.5 },
         didDrawPage: () => { desenharRodape(); }
       });
       y = doc.lastAutoTable.finalY + 4;
 
+      // NOTA DE FLEXIBILIDADE
       const notaLines = doc.splitTextToSize(NOTA_FLEXIBILIDADE, contentWidth - 70);
       const alturaNota = Math.max(6, 2 + (notaLines.length * 3.5));
       if(y + alturaNota > 270) { doc.addPage(); y = 15; desenharRodape(); }
@@ -1258,6 +1274,7 @@
       doc.text(notaLines, marginLeft + 68, y + 2);
       y += alturaNota + 3;
 
+      // OBSERVAÇÕES
       if (cliente.obs) {
         const obsLines = doc.splitTextToSize(`ANOTAÇÕES COMPLEMENTARES DE CAMPO: ${cliente.obs}`, contentWidth - 4);
         const alturaObs = 4 + (obsLines.length * 3.5);
@@ -1269,6 +1286,7 @@
         y += alturaObs + 3;
       }
 
+      // INSTRUÇÕES DE SEGURANÇA
       if(y + 18 > 270) { doc.addPage(); y = 15; desenharRodape(); }
       doc.setFillColor(254, 242, 242);
       doc.rect(marginLeft, y - 2, contentWidth, 15, 'F');
@@ -1280,7 +1298,8 @@
       doc.text('- Promover a ventilação ampla do imóvel abrindo janelas 1 hora antes do reingresso definitivo.', marginLeft + 2, y + 11);
       y += 18;
 
-      if (y + 35 > 270) { doc.addPage(); y = 15; desenharRodape(); }
+      // ASSINATURAS + QR CODE (centralizado)
+      if (y + 45 > 270) { doc.addPage(); y = 15; desenharRodape(); }
 
       doc.line(marginLeft, y, marginLeft + 70, y);
       doc.line(marginLeft + 100, y, marginLeft + contentWidth, y);
@@ -1295,14 +1314,17 @@
       doc.text('Registro: _______________________________', marginLeft + 2, y + 4);
       y += 12;
 
-      const qrWidth = 30, qrHeight = 30;
-      doc.addImage(qrDataUrl, 'PNG', marginLeft + contentWidth - qrWidth - 5, y - 18, qrWidth, qrHeight);
-      doc.setFontSize(6.5);
-      doc.text('Consulte o cronograma online', marginLeft + contentWidth - (qrWidth/2) - 5, y + 15, { align: 'center' });
+      // QR CODE CENTRALIZADO
+      const qrWidth = 35;
+      const qrX = (doc.internal.pageSize.getWidth() - qrWidth) / 2;
+      doc.addImage(qrDataUrl, 'PNG', qrX, y, qrWidth, qrWidth);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Consulte o cronograma online', doc.internal.pageSize.getWidth() / 2, y + qrWidth + 4, { align: 'center' });
 
       desenharRodape();
       doc.save(`Certificado_RFK_${cliente.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
-      mostrarToast("Certificado PDF gerado!", "success");
+      mostrarToast("Certificado PDF gerado com sucesso!", "success");
     } catch (err) {
       console.error(err);
       mostrarToast("Erro ao gerar PDF: " + err.message, "error");
