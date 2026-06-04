@@ -22,11 +22,13 @@
     .pasta-confirmada { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 6px solid #22c55e; opacity: 0.85; }
     .pasta-em-dia { background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-left: 6px solid #3b82f6; }
     .sinal-alerta { position: absolute; top: -12px; right: 12px; background: linear-gradient(135deg, #dc2626, #ef4444); color: white; padding: 6px 16px; border-radius: 40px; font-size: 11px; font-weight: 900; text-transform: uppercase; animation: pulse 1.5s infinite; box-shadow: 0 4px 12px rgba(220,38,38,0.4); z-index: 20; }
+    .sinal-atencao { position: absolute; top: -12px; right: 12px; background: linear-gradient(135deg, #f59e0b, #f97316); color: white; padding: 6px 16px; border-radius: 40px; font-size: 11px; font-weight: 900; text-transform: uppercase; animation: pulse 1.5s infinite; box-shadow: 0 4px 12px rgba(245,158,11,0.4); z-index: 20; }
     @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.98)} }
     input, select, textarea { border: 2px solid #e2e8f0; border-radius: 16px; padding: 12px 16px; outline: none; background: white; width: 100%; font-size: 14px; font-weight: 500; transition: all 0.2s ease; }
     input:focus, select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); transform: translateY(-1px); }
     .btn-pasta { border-radius: 14px; padding: 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s ease; }
     .btn-pasta:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .btn-pasta:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .toast-notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e293b; color: white; padding: 12px 24px; border-radius: 48px; font-weight: 600; font-size: 13px; z-index: 1000; transition: transform 0.3s ease; white-space: nowrap; }
     .toast-notification.show { transform: translateX(-50%) translateY(0); }
     .recomendacao-box { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 4px solid #0284c7; padding: 12px; border-radius: 16px; margin-top: 8px; }
@@ -64,6 +66,9 @@
     .btn-quimico { background: #6b21a5; border-radius: 20px; padding: 2px 6px; font-size: 9px; margin-left: 6px; color: white; display: inline-block; }
     .editar-visita { cursor: pointer; margin-left: 8px; font-size: 12px; background: #e2e8f0; padding: 2px 6px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
     .editar-visita:hover { background: #cbd5e1; }
+    .campo-obrigatorio { border-color: #f97316 !important; background-color: #fff7ed !important; }
+    .config-box { background: #f8fafc; border-radius: 16px; padding: 12px; margin-bottom: 16px; }
+    .hidden-field { display: none !important; }
     @media (max-width: 640px) {
       .visita-item { flex-direction: column; align-items: flex-start; }
       .status-label { align-self: flex-start; }
@@ -98,12 +103,35 @@
       <div class="chart-container"><canvas id="statusChart" width="300" height="150" style="max-width:100%; height:150px;"></canvas></div>
     </div>
   </div>
+  <div class="dashboard-card mb-6 bg-gradient-to-r from-emerald-50 to-teal-50">
+    <h3 class="font-bold text-emerald-800 mb-2">💰 Resumo Financeiro</h3>
+    <div class="grid grid-cols-2 gap-3 text-center">
+      <div class="bg-white p-3 rounded-xl shadow-sm"><p class="text-xs text-gray-500">Total de Contratos</p><p id="finance-total-contratos" class="text-xl font-black text-emerald-600">0</p></div>
+      <div class="bg-white p-3 rounded-xl shadow-sm"><p class="text-xs text-gray-500">Valor Total (R$)</p><p id="finance-valor-total" class="text-xl font-black text-emerald-600">R$ 0,00</p></div>
+    </div>
+    <div class="mt-3 text-xs text-gray-600" id="finance-resumo-formas"></div>
+  </div>
   <div class="grid grid-cols-4 gap-2 mb-6">
     <button onclick="exportarBackupSeguro()" class="bg-emerald-600 text-white py-2 rounded-xl text-[10px] font-bold">🔐 Backup</button>
     <button onclick="importarBackupSeguro()" class="bg-amber-600 text-white py-2 rounded-xl text-[10px] font-bold">📁 Restaurar</button>
     <button onclick="limparArmazenamentoSeguro()" class="bg-red-600 text-white py-2 rounded-xl text-[10px] font-bold">🗑️ Limpar</button>
     <button onclick="gerarQRCodeCliente()" class="bg-indigo-600 text-white py-2 rounded-xl text-[10px] font-bold">📱 QR Code</button>
   </div>
+  <div class="grid grid-cols-2 gap-2 mb-6">
+    <button onclick="recalcularTodosClientes()" class="bg-sky-600 text-white py-2 rounded-xl text-[10px] font-bold">🔄 Atualizar Todos</button>
+    <button onclick="buscarEnderecoPorCEP()" class="bg-teal-600 text-white py-2 rounded-xl text-[10px] font-bold">📍 Buscar CEP</button>
+  </div>
+
+  <div class="config-box mb-6">
+    <h3 class="font-bold text-gray-700 text-sm mb-2">🌐 Configuração do Site Público (QR Code)</h3>
+    <div class="flex gap-2 flex-wrap">
+      <input type="url" id="config-site-url" class="flex-1 text-sm" placeholder="https://meusite.com/rfk" value="">
+      <button onclick="salvarUrlSite()" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold">Salvar URL</button>
+      <button onclick="abrirSitePublico()" class="bg-purple-600 text-white px-3 py-2 rounded-lg text-xs font-bold">🌐 Acessar Site</button>
+    </div>
+    <p class="text-[10px] text-gray-500 mt-2">Digite o endereço completo do sistema hospedado (ex: https://rfk.netlify.app). O QR Code levará o cliente para esse endereço.</p>
+  </div>
+
   <div id="form-container" class="bg-white rounded-3xl border-2 border-blue-100 mb-8 shadow-xl overflow-hidden">
     <div class="bg-gradient-to-r from-blue-50 to-white px-6 py-4 border-b border-blue-100 flex justify-between items-center">
       <h2 class="text-xs font-black text-blue-900 uppercase">📝 Registro de Atendimento</h2>
@@ -112,12 +140,29 @@
     <div class="p-6">
       <input id="f-id" type="hidden">
       <div class="space-y-4">
-        <div><label class="block font-black text-gray-500 uppercase text-[9px]">👤 Nome do Cliente *</label><input id="f-nome" type="text" class="w-full"></div>
-        <div><label class="block font-black text-gray-500 uppercase text-[9px]">📱 WhatsApp *</label><input id="f-tel" type="tel" oninput="mascaraTel(this)" class="w-full" placeholder="(99) 99999-9999"></div>
-        <div class="grid grid-cols-3 gap-2"><div class="col-span-2"><input id="f-rua" placeholder="Rua"></div><div><input id="f-numero" placeholder="Nº"></div></div>
-        <div class="grid grid-cols-2 gap-2"><div><input id="f-bairro" placeholder="Bairro"></div><div><input id="f-complemento" placeholder="Complemento"></div></div>
-        <div class="grid grid-cols-2 gap-2"><div><input id="f-cidade" placeholder="Cidade" value="Tonantins"></div><div><input id="f-cep" placeholder="CEP" oninput="mascaraCEP(this)"></div></div>
-        <div class="grid grid-cols-2 gap-2"><select id="f-tipoImovel"><option value="casa">🏠 Casa</option><option value="comercio">🏢 Comércio</option><option value="apartamento">🏢 Apartamento</option><option value="sitio">🌳 Sítio/Chácara</option><option value="industria">🏭 Indústria</option></select><select id="f-ambiente"><option value="residencial">🏠 Residencial</option><option value="comercial">🏢 Comercial</option><option value="industrial">🏭 Industrial</option><option value="rural">🌾 Rural</option></select></div>
+        <div>
+          <label id="label-nome-cliente" class="block font-black text-gray-500 uppercase text-[9px]">👤 Nome do Cliente *</label>
+          <input id="f-razao-social" type="text" class="w-full obrigatorio" placeholder="Nome / Razão Social" oninput="removerAvisoObrigatorio(this)">
+        </div>
+        <div id="div-nome-fantasia" class="hidden-field">
+          <label class="block font-black text-gray-500 uppercase text-[9px]">🏷️ Nome Fantasia</label>
+          <input id="f-nome-fantasia" type="text" class="w-full" placeholder="Nome fantasia (opcional)">
+        </div>
+
+        <div><label class="block font-black text-gray-500 uppercase text-[9px]">📱 WhatsApp *</label><input id="f-tel" type="tel" oninput="mascaraTel(this); removerAvisoObrigatorio(this);" class="w-full obrigatorio" placeholder="(99) 99999-9999"></div>
+        <div class="grid grid-cols-3 gap-2"><div class="col-span-2"><input id="f-rua" placeholder="Rua *" class="obrigatorio" oninput="removerAvisoObrigatorio(this)"></div><div><input id="f-numero" placeholder="Nº *" class="obrigatorio" oninput="removerAvisoObrigatorio(this)"></div></div>
+        <div class="grid grid-cols-2 gap-2"><div><input id="f-bairro" placeholder="Bairro *" class="obrigatorio" oninput="removerAvisoObrigatorio(this)"></div><div><input id="f-complemento" placeholder="Complemento"></div></div>
+        <div class="grid grid-cols-2 gap-2"><div><input id="f-cidade" placeholder="Cidade *" value="Tonantins" class="obrigatorio" oninput="removerAvisoObrigatorio(this)"></div><div><input id="f-cep" placeholder="CEP *" oninput="mascaraCEP(this); removerAvisoObrigatorio(this); debounceBuscarCEP();" class="obrigatorio"></div></div>
+        <div class="grid grid-cols-2 gap-2">
+          <select id="f-tipoImovel" onchange="atualizarCamposComercial()">
+            <option value="casa">🏠 Casa</option>
+            <option value="comercio">🏢 Comércio</option>
+            <option value="apartamento">🏢 Apartamento</option>
+            <option value="sitio">🌳 Sítio/Chácara</option>
+            <option value="industria">🏭 Indústria</option>
+          </select>
+          <select id="f-ambiente"><option value="residencial">🏠 Residencial</option><option value="comercial">🏢 Comercial</option><option value="industrial">🏭 Industrial</option><option value="rural">🌾 Rural</option></select>
+        </div>
         <div class="grid grid-cols-3 gap-2"><div><input id="f-moradores" type="number" value="1" placeholder="Moradores"></div><div><input id="f-criancas" type="number" value="0" placeholder="Crianças <6a"></div><div><input id="f-animais" type="number" value="0" placeholder="Animais"></div></div>
         <div><input id="f-tipoAnimais" placeholder="Tipo de animais"></div>
         <div id="pragas-container" class="grid grid-cols-2 gap-1">
@@ -134,11 +179,27 @@
         <div><select id="f-tipoTrabalho" onchange="atualizarRecomendacao()"><option value="pulverizacao">💨 Pulverização</option><option value="gel">🍯 Gel</option><option value="pó">⚡ Pó</option><option value="armadilha">📦 Armadilhas</option><option value="fumigacao">🌫️ Fumigação</option><option value="integrado">🔄 Integrado</option></select></div>
         <div><label class="block font-black text-gray-500 uppercase text-[9px] mb-1">🏷️ Tipo de Serviço</label><div class="radio-group"><label><input type="radio" name="tipoServico" value="tratamento" checked> 🩺 Tratamento</label><label><input type="radio" name="tipoServico" value="preventivo"> 🛡️ Preventivo</label></div></div>
         <div id="recomendacao-container" class="recomendacao-box hidden"><p class="text-[9px] font-black">🔬 ESPECIFICAÇÃO DE INSUMOS (ANVISA)</p><p id="recomendacao-texto"></p><div id="produtos-container" class="space-y-1"></div></div>
-        <div class="grid grid-cols-2 gap-2"><select id="f-garantia" onchange="onGarantiaChange()"><option value="40">40 dias</option><option value="60">60 dias</option><option value="90" selected>90 dias</option><option value="180">180 dias</option></select><select id="f-freq" onchange="validarFrequenciaInput()"><option value="7">Semanal</option><option value="15">Quinzenal</option><option value="30">Mensal</option></select></div>
-        <div class="grid grid-cols-2 gap-2"><input id="f-inicio" type="date" onchange="validarDataInicio(); calcularProximaAutomatica()"><input id="f-termino" type="date" readonly disabled></div>
-        <div class="grid grid-cols-2 gap-2"><input id="f-prox" type="date" onchange="validarDataProxima()"><input id="f-realizadas" type="number" value="1" onchange="validarRealizadasInput()" min="0"></div>
+        <div class="grid grid-cols-2 gap-2"><select id="f-garantia" onchange="onGarantiaChange()"><option value="40">40 dias</option><option value="60">60 dias</option><option value="90" selected>90 dias</option><option value="180">180 dias</option></select><select id="f-freq" onchange="validarFrequenciaInput(); recalcularDatasFormulario()"><option value="7">Semanal</option><option value="15">Quinzenal</option><option value="30">Mensal</option></select></div>
+        <div class="grid grid-cols-2 gap-2"><input id="f-inicio" type="date" onchange="validarDataInicio(); recalcularDatasFormulario()"><input id="f-termino" type="date" readonly disabled></div>
+        <div class="grid grid-cols-2 gap-2"><input id="f-prox" type="date" onchange="validarDataProxima()"><input id="f-realizadas" type="number" value="1" onchange="validarRealizadasInput(); recalcularDatasFormulario()" min="0"></div>
         <div id="info-visitas" class="text-[9px] text-gray-500"></div>
         <div class="nota-contrato">ℹ️ As datas são estimativas. Podem ser adiadas/antecipadas em até 5 dias úteis.</div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block font-black text-gray-500 uppercase text-[9px]">💰 Valor (R$)</label><input id="f-valor" type="text" inputmode="decimal" oninput="mascaraValor(this)" class="w-full" placeholder="0,00"></div>
+          <div><label class="block font-black text-gray-500 uppercase text-[9px]">💳 Forma de Pagamento</label>
+            <select id="f-formaPagamento">
+              <option value="dinheiro">💵 Dinheiro</option>
+              <option value="pix">📱 PIX</option>
+              <option value="cartao_credito">💳 Cartão Crédito</option>
+              <option value="cartao_debito">💳 Cartão Débito</option>
+              <option value="boleto">📄 Boleto</option>
+              <option value="transferencia">🏦 Transferência</option>
+              <option value="outros">🔄 Outros</option>
+            </select>
+          </div>
+        </div>
+        
         <textarea id="f-obs" rows="2" placeholder="Observações"></textarea>
         <button onclick="salvarCliente()" class="w-full bg-blue-700 text-white py-3 rounded-xl font-bold">💾 Salvar Contrato</button>
       </div>
@@ -157,58 +218,16 @@
   <div id="box-cliente-result"></div>
 </main>
 
-<!-- MODAL PERGUNTAR APLICAÇÃO QUÍMICA -->
-<div id="modal-quimico" class="modal-quimico">
-  <div class="modal-content">
-    <span class="close-modal" onclick="fecharModalQuimico()">&times;</span>
-    <h3 class="font-bold text-lg mb-4">🧪 Registrar Aplicação Química</h3>
-    <p class="mb-4">Houve uso de <strong>carga química</strong> (inseticidas/raticidas) nesta visita?</p>
-    <div class="flex gap-4 justify-center flex-wrap">
-      <button onclick="finalizarVisitaComQuimico(true)" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold">✅ Sim</button>
-      <button onclick="finalizarVisitaComQuimico(false)" class="bg-gray-600 text-white px-6 py-2 rounded-full font-bold">❌ Não</button>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL EDITAR APLICAÇÃO QUÍMICA -->
-<div id="modal-editar-quimico" class="modal-editar-quimico">
-  <div class="modal-content">
-    <span class="close-modal" onclick="fecharModalEditarQuimico()">&times;</span>
-    <h3 class="font-bold text-lg mb-4">✏️ Editar Aplicação Química</h3>
-    <p id="editar-visita-label" class="mb-4 text-sm">Editando visita:</p>
-    <div class="flex flex-col gap-3 items-center">
-      <button onclick="salvarEdicaoQuimico(true)" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold w-full">✅ Sim (aplicou químico)</button>
-      <button onclick="salvarEdicaoQuimico(false)" class="bg-gray-600 text-white px-6 py-2 rounded-full font-bold w-full">❌ Não (apenas inspeção)</button>
-      <button onclick="salvarEdicaoQuimico(null)" class="bg-yellow-600 text-white px-6 py-2 rounded-full font-bold w-full">🔄 Não informado (limpar)</button>
-    </div>
-  </div>
-</div>
-
-<div id="modal-armadilhas" class="modal-armadilhas">
-  <div class="modal-content">
-    <span class="close-modal" onclick="fecharModalArmadilhas()">&times;</span>
-    <h3 class="font-bold text-lg mb-4">Locais das Armadilhas</h3>
-    <div id="lista-locais-modal" class="mb-4"></div>
-    <div class="flex gap-2"><input id="novo-local-input" placeholder="Ex: Cozinha, Área de serviço..." class="flex-1"><button onclick="adicionarLocalArmadilha()" class="bg-blue-600 text-white px-3 py-2 rounded-lg">+ Adicionar</button></div>
-    <button onclick="salvarLocaisArmadilhas()" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-full w-full">Salvar</button>
-  </div>
-</div>
-
-<div id="modal-qrcode" class="modal-qrcode">
-  <div class="modal-content">
-    <span class="close-modal" onclick="fecharModalQR()">&times;</span>
-    <h3 class="font-bold text-lg mb-4">📱 QR Code para o Cliente</h3>
-    <p class="text-sm mb-2">Escaneie com o celular para acessar a área do cliente e baixar seu certificado.</p>
-    <div id="qrcode"></div>
-  </div>
-</div>
+<div id="modal-quimico" class="modal-quimico"><div class="modal-content"><span class="close-modal" onclick="fecharModalQuimico()">&times;</span><h3 class="font-bold text-lg mb-4">🧪 Registrar Aplicação Química</h3><p class="mb-4">Houve uso de <strong>carga química</strong> (inseticidas/raticidas) nesta visita?</p><div class="flex gap-4 justify-center flex-wrap"><button onclick="finalizarVisitaComQuimico(true)" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold">✅ Sim</button><button onclick="finalizarVisitaComQuimico(false)" class="bg-gray-600 text-white px-6 py-2 rounded-full font-bold">❌ Não</button></div></div></div>
+<div id="modal-editar-quimico" class="modal-editar-quimico"><div class="modal-content"><span class="close-modal" onclick="fecharModalEditarQuimico()">&times;</span><h3 class="font-bold text-lg mb-4">✏️ Editar Aplicação Química</h3><p id="editar-visita-label" class="mb-4 text-sm">Editando visita:</p><div class="flex flex-col gap-3 items-center"><button onclick="salvarEdicaoQuimico(true)" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold w-full">✅ Sim (aplicou químico)</button><button onclick="salvarEdicaoQuimico(false)" class="bg-gray-600 text-white px-6 py-2 rounded-full font-bold w-full">❌ Não (apenas inspeção)</button><button onclick="salvarEdicaoQuimico(null)" class="bg-yellow-600 text-white px-6 py-2 rounded-full font-bold w-full">🔄 Não informado (limpar)</button></div></div></div>
+<div id="modal-armadilhas" class="modal-armadilhas"><div class="modal-content"><span class="close-modal" onclick="fecharModalArmadilhas()">&times;</span><h3 class="font-bold text-lg mb-4">Locais das Armadilhas</h3><div id="lista-locais-modal" class="mb-4"></div><div class="flex gap-2"><input id="novo-local-input" placeholder="Ex: Cozinha, Área de serviço..." class="flex-1"><button onclick="adicionarLocalArmadilha()" class="bg-blue-600 text-white px-3 py-2 rounded-lg">+ Adicionar</button></div><button onclick="salvarLocaisArmadilhas()" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-full w-full">Salvar</button></div></div>
+<div id="modal-qrcode" class="modal-qrcode"><div class="modal-content"><span class="close-modal" onclick="fecharModalQR()">&times;</span><h3 class="font-bold text-lg mb-4">📱 QR Code para o Cliente</h3><p class="text-sm mb-2">Escaneie com o celular para acessar a área do cliente e baixar seu certificado.</p><div id="qrcode"></div></div></div>
 
 <div id="toast" class="toast-notification"></div>
 <div id="pdf-loading" class="pdf-loading"><div class="spinner"></div><p>Gerando PDF... Aguarde</p><p id="pdf-status"></p></div>
 <input type="file" id="restore-file-input" style="display:none">
 
 <script>
-  // ==================== CONSTANTES ====================
   const SENHA_MESTRA = "admin123";
   const STORAGE_KEY = 'rfk_db_encrypted';
   const DADOS_EMPRESA = { 
@@ -254,48 +273,54 @@
   let pendingVisitClientId = null;
   let editandoClienteId = null;
   let editandoVisitaNumero = null;
+  let timeoutCEP = null;
 
-  // ==================== CRIPTOGRAFIA ====================
   function gerarChaveUnica(){ let chave=localStorage.getItem('rfk_encryption_key'); if(!chave){ chave=btoa(Date.now()+Math.random()+navigator.userAgent); localStorage.setItem('rfk_encryption_key',chave); } return chave; }
   function criptografar(dados){ try{ const chave=gerarChaveUnica(); const texto=JSON.stringify(dados); let res=''; for(let i=0;i<texto.length;i++) res+=String.fromCharCode(texto.charCodeAt(i)^chave.charCodeAt(i%chave.length)); return btoa(res); }catch(e){ return null; } }
   function descriptografar(dadosCript){ try{ if(!dadosCript) return null; const chave=gerarChaveUnica(); const texto=atob(dadosCript); let res=''; for(let i=0;i<texto.length;i++) res+=String.fromCharCode(texto.charCodeAt(i)^chave.charCodeAt(i%chave.length)); return JSON.parse(res); }catch(e){ return []; } }
   function salvarDadosSeguros(dados){ const c=criptografar(dados); if(c){ localStorage.setItem(STORAGE_KEY,c); return true; } return false; }
   function carregarDadosSeguros(){ const c=localStorage.getItem(STORAGE_KEY); if(!c) return []; const dados=descriptografar(c); return dados&&Array.isArray(dados)?dados:[]; }
 
-  // ==================== MIGRAÇÃO PARA DETALHES DE VISITAS ====================
   function migrarDetalhesVisitas() {
     let db = carregarDadosSeguros();
     let modificado = false;
     for (let c of db) {
       if (!c.detalhesVisitas) {
         c.detalhesVisitas = [];
-        const realizadas = c.realizadas || 0;
-        for (let i = 0; i < realizadas; i++) {
-          c.detalhesVisitas.push({
-            numero: i+1,
-            data: null,
-            aplicouQuimico: null
-          });
-        }
         modificado = true;
       }
+      while (c.detalhesVisitas.length > (c.realizadas || 0)) {
+        c.detalhesVisitas.pop();
+        modificado = true;
+      }
+      while (c.detalhesVisitas.length < (c.realizadas || 0)) {
+        c.detalhesVisitas.push({
+          numero: c.detalhesVisitas.length + 1,
+          data: c.inicio || new Date().toISOString().split('T')[0],
+          aplicouQuimico: null
+        });
+        modificado = true;
+      }
+      if (c.valor === undefined) { c.valor = 0; modificado = true; }
+      if (c.formaPagamento === undefined) { c.formaPagamento = 'dinheiro'; modificado = true; }
+      if (c.nomeFantasia === undefined) { c.nomeFantasia = ''; modificado = true; }
     }
     if (modificado) salvarDadosSeguros(db);
   }
 
-  // ==================== NÚMERO DE CONTROLE ====================
   function formatarNumeroControle(ano, seq) { return `${seq.toString().padStart(3, '0')}/${ano}`; }
   function obterProximoNumeroControle(ano, clientes) {
     let maxSeq = 0;
     for (let c of clientes) if (c.numeroControle && c.numeroControle.ano === ano && c.numeroControle.seq > maxSeq) maxSeq = c.numeroControle.seq;
     return { ano, seq: maxSeq + 1 };
   }
+  
   function atribuirNumeroControleParaClientesAntigos() {
     let db = carregarDadosSeguros();
     let modificado = false;
     let grupos = {};
     for (let c of db) {
-      let ano = c.inicio ? new Date(c.inicio + "T12:00:00").getFullYear() : new Date().getFullYear();
+      let ano = c.inicio ? parseInt(c.inicio.split('-')[0]) : new Date().getFullYear();
       if (!grupos[ano]) grupos[ano] = [];
       grupos[ano].push(c);
     }
@@ -314,14 +339,20 @@
     if (modificado) { salvarDadosSeguros(db); renderizarLista(); atualizarDashboard(); }
   }
 
-  // ==================== UTILITÁRIOS ====================
   function mostrarToast(msg, tipo="info"){ 
     const t=document.getElementById('toast'); 
     t.textContent=msg; 
     t.style.background=tipo==="success"?"#10b981":tipo==="error"?"#ef4444":"#1e293b"; 
     t.classList.add('show'); 
-    setTimeout(()=>t.classList.remove('show'),3000); 
+    setTimeout(()=>t.classList.remove('show'), 3000); 
   }
+  
+  function removerAvisoObrigatorio(el) {
+    if(el && el.value.trim()) {
+      el.classList.remove('campo-obrigatorio');
+    }
+  }
+
   function mascaraTel(i){
     let v=i.value.replace(/\D/g,'');
     if(v.length<=10) v=v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3');
@@ -329,7 +360,14 @@
     i.value=v.substring(0,16);
   }
   function mascaraCEP(i){let v=i.value.replace(/\D/g,'');if(v.length>5)v=v.replace(/^(\d{5})(\d)/,'$1-$2');i.value=v.substring(0,9);}
-  function formatarDataBR(d){if(!d)return'Não definida';const data=new Date(d+"T12:00:00");return`${data.getDate().toString().padStart(2,'0')}/${(data.getMonth()+1).toString().padStart(2,'0')}/${data.getFullYear()}`;}
+  
+  function formatarDataBR(d){
+    if(!d)return'Não definida';
+    const partes = d.split('-');
+    if(partes.length !== 3) return d;
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  }
+  
   function getPragaNome(p){const n={baratas:'Baratas',formigas:'Formigas',ratos:'Ratos/Camundongos',escorpioes:'Escorpiões',aranhas:'Aranhas',cupins:'Cupins',mosquitos:'Mosquitos',pulgas:'Pulgas'};return n[p]||p;}
   function getTrabalhoNome(t){const n={pulverizacao:'Pulverização',gel:'Gel Inseticida',pó:'Pó Químico',armadilha:'Armadilhas',fumigacao:'Fumigação',integrado:'Controle Integrado'};return n[t]||t;}
   function escapeHtml(t){if(!t)return'';const d=document.createElement('div');d.textContent=t;return d.innerHTML;}
@@ -340,13 +378,21 @@
     return Math.floor(g / f);
   }
   
+  function verificarDataValida(d) {
+    return d && !isNaN(new Date(d + "T00:00:00").getTime());
+  }
+
   function calcularTerminoContrato(){ 
     const inicio=document.getElementById('f-inicio').value, garantia=parseInt(document.getElementById('f-garantia').value); 
-    if(inicio&&garantia){ const dataTermino=new Date(inicio+"T12:00:00"); dataTermino.setDate(dataTermino.getDate()+garantia); document.getElementById('f-termino').value=dataTermino.toISOString().split('T')[0]; } 
+    if(verificarDataValida(inicio)&&garantia){ 
+      const dataTermino=new Date(inicio+"T00:00:00"); 
+      dataTermino.setDate(dataTermino.getDate()+garantia); 
+      document.getElementById('f-termino').value=dataTermino.toISOString().split('T')[0]; 
+    } 
     else document.getElementById('f-termino').value=''; 
   }
   
-  function onGarantiaChange(){ calcularTerminoContrato(); calcularProximaAutomatica(); }
+  function onGarantiaChange(){ calcularTerminoContrato(); recalcularDatasFormulario(); }
   
   function validarFrequenciaInput() {
     const fInput = document.getElementById('f-freq');
@@ -355,14 +401,14 @@
       mostrarToast("A frequência deve ser maior que zero! Reconfigurado para 30 dias.", "error");
       fInput.value = "30";
     }
-    calcularProximaAutomatica();
+    recalcularDatasFormulario();
   }
 
   function validarRealizadasInput() {
     let rInput = document.getElementById('f-realizadas');
     let val = parseInt(rInput.value);
     if (isNaN(val) || val < 0) rInput.value = 0;
-    calcularProximaAutomatica();
+    recalcularDatasFormulario();
   }
 
   function validarDataInicio() {
@@ -371,13 +417,18 @@
     if (inicio && inicio > hoje) {
       mostrarToast("Data de início não pode ser futura! Ajustada para hoje.", "error");
       document.getElementById('f-inicio').value = hoje;
-      calcularProximaAutomatica();
+      recalcularDatasFormulario();
     }
   }
 
+  function recalcularDatasFormulario() {
+    calcularTerminoContrato();
+    calcularProximaAutomatica();
+  }
+
   function obterListaVisitas(cliente){ 
-    if(!cliente||!cliente.inicio) return [];
-    const inicio=new Date(cliente.inicio+"T12:00:00");
+    if(!cliente||!verificarDataValida(cliente.inicio)) return [];
+    const inicio=new Date(cliente.inicio+"T00:00:00");
     const freq=parseInt(cliente.freq);
     if (freq <= 0) return [];
     const totalVisitas=getTotalVisitas(cliente.garantia, cliente.freq);
@@ -386,7 +437,8 @@
     for(let i=0;i<totalVisitas;i++){
       const data=new Date(inicio);
       data.setDate(inicio.getDate()+(i*freq));
-      const dataStr=formatarDataBR(data.toISOString().split('T')[0]);
+      const dataISO = data.toISOString().split('T')[0];
+      const dataStr=formatarDataBR(dataISO);
       let aplicou = null;
       if (cliente.detalhesVisitas && cliente.detalhesVisitas[i]) {
         aplicou = cliente.detalhesVisitas[i].aplicouQuimico;
@@ -404,8 +456,8 @@
   
   function recalcularDatasCliente(c){ 
     const di=c.inicio, fr=parseInt(c.freq), re=parseInt(c.realizadas);
-    if(di&&fr&&re>=0 && fr>0){
-      const dc=new Date(di+"T12:00:00");
+    if(verificarDataValida(di)&&fr&&re>=0 && fr>0){
+      const dc=new Date(di+"T00:00:00");
       dc.setDate(dc.getDate()+(re*fr));
       const np=dc.toISOString().split('T')[0];
       if(c.prox!==np){ c.prox=np; return true; }
@@ -414,23 +466,34 @@
   }
   
   function getStatusCliente(c){ 
-    const hojeObj = new Date();
-    const hojeISO = `${hojeObj.getFullYear()}-${(hojeObj.getMonth()+1).toString().padStart(2,'0')}-${hojeObj.getDate().toString().padStart(2,'0')}`;
-    
-    const dataProxObj = new Date(c.prox + "T12:00:00");
-    const dataHojeObj = new Date(hojeISO + "T12:00:00");
-    const diff = Math.ceil((dataProxObj - dataHojeObj)/(1000*60*60*24));
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const dataProx = verificarDataValida(c.prox) ? new Date(c.prox + "T00:00:00") : new Date();
+    dataProx.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((dataProx - hoje) / (1000 * 60 * 60 * 24));
     
     const total = getTotalVisitas(c.garantia, c.freq);
     const realizadas = parseInt(c.realizadas) || 0;
+    const cicloCompleto = realizadas >= total;
+    
+    let isAtrasado = false;
+    let isAtencao = false;
+    
+    if (!cicloCompleto) {
+      if (diff < 0) {
+        isAtrasado = true;
+      } else if (diff <= 1) {
+        isAtencao = true;
+      }
+    }
     
     return {
-      isAtrasado: c.prox < hojeISO && !c.confirmado && realizadas < total && diff < -1,
-      isAtencao: (diff === -1 || diff === 0) && realizadas < total,
+      isAtrasado,
+      isAtencao,
       diffDias: diff,
       totalVisitas: total,
       restam: total - realizadas,
-      cicloCompleto: realizadas >= total
+      cicloCompleto
     }; 
   }
   
@@ -439,10 +502,11 @@
   function calcularProximaAutomatica(){ 
     const di=document.getElementById('f-inicio').value, fr=parseInt(document.getElementById('f-freq').value), re=parseInt(document.getElementById('f-realizadas').value)||0; 
     calcularTerminoContrato(); 
-    if(di && fr > 0){ 
-      const dc=new Date(di+"T12:00:00"); 
+    if(verificarDataValida(di) && fr > 0){ 
+      const dc=new Date(di+"T00:00:00"); 
       dc.setDate(dc.getDate()+(re*fr)); 
-      document.getElementById('f-prox').value=dc.toISOString().split('T')[0]; 
+      const proxDate = dc.toISOString().split('T')[0];
+      document.getElementById('f-prox').value=proxDate; 
       const ga=parseInt(document.getElementById('f-garantia').value); 
       const total=Math.floor(ga/fr); 
       document.getElementById('info-visitas').innerHTML=`📊 Total de visitas: ${total} | Próxima: ${re+1}ª`; 
@@ -451,7 +515,14 @@
     }
   }
   
-  function validarDataProxima(){const dp=document.getElementById('f-prox').value; const hoje=new Date().toISOString().split('T')[0]; if(dp<hoje) mostrarToast("⚠️ Data no passado!","error");}
+  function validarDataProxima(){
+    const prox = document.getElementById('f-prox').value;
+    const hoje = new Date().toISOString().split('T')[0];
+    if (prox && prox < hoje) {
+      mostrarToast("⚠️ Data da próxima visita no passado! Verifique o cronograma.", "error");
+    }
+    return true; 
+  }
   
   function atualizarRecomendacao(){
     const checks = document.querySelectorAll('#pragas-container input:checked');
@@ -480,9 +551,34 @@
 
   function getPragasSelecionadas(){return Array.from(document.querySelectorAll('#pragas-container input:checked')).map(cb=>cb.value);}
   
+  function mascaraValor(input) {
+    let val = input.value.replace(/[^0-9,]/g, '');
+    let parts = val.split(',');
+    if (parts.length > 2) val = parts[0] + ',' + parts.slice(1).join('');
+    input.value = val;
+  }
+  
+  function atualizarCamposComercial() {
+    const tipo = document.getElementById('f-tipoImovel').value;
+    const isComercial = (tipo === 'comercio' || tipo === 'industria');
+    const divFantasia = document.getElementById('div-nome-fantasia');
+    const labelNome = document.getElementById('label-nome-cliente');
+    const inputRazao = document.getElementById('f-razao-social');
+    
+    if (isComercial) {
+      divFantasia.classList.remove('hidden-field');
+      labelNome.innerHTML = '🏢 Razão Social *';
+      inputRazao.placeholder = 'Razão Social (CNPJ)';
+    } else {
+      divFantasia.classList.add('hidden-field');
+      labelNome.innerHTML = '👤 Nome do Cliente *';
+      inputRazao.placeholder = 'Nome completo';
+    }
+  }
+  
   function cancelarEdicao(){ 
-    const campos=['f-id','f-nome','f-tel','f-rua','f-numero','f-bairro','f-complemento','f-cep','f-tipoAnimais','f-obs','f-locaisArmadilhas']; 
-    campos.forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); 
+    const campos=['f-id','f-razao-social','f-nome-fantasia','f-tel','f-rua','f-numero','f-bairro','f-complemento','f-cep','f-tipoAnimais','f-obs','f-locaisArmadilhas','f-valor','f-formaPagamento']; 
+    campos.forEach(id=>{const el=document.getElementById(id);if(el) { el.value=''; el.classList.remove('campo-obrigatorio'); }}); 
     document.getElementById('f-cidade').value='Tonantins'; 
     document.getElementById('f-moradores').value='1'; 
     document.getElementById('f-criancas').value='0'; 
@@ -493,6 +589,8 @@
     document.getElementById('f-tipoTrabalho').value='pulverizacao'; 
     document.getElementById('f-garantia').value='90'; 
     document.getElementById('f-freq').value='30'; 
+    document.getElementById('f-valor').value='';
+    document.getElementById('f-formaPagamento').value='dinheiro';
     const hoje = new Date().toISOString().split('T')[0]; 
     document.getElementById('f-inicio').value=hoje; 
     document.querySelectorAll('#pragas-container input').forEach(cb=>cb.checked=false); 
@@ -502,9 +600,9 @@
     locaisArmadilhasTemp=[]; 
     document.getElementById('f-locaisArmadilhas').value='[]'; 
     atualizarPreviewArmadilhas(); 
-    calcularTerminoContrato();
-    calcularProximaAutomatica(); 
+    recalcularDatasFormulario();
     document.getElementById('recomendacao-container').classList.add('hidden'); 
+    atualizarCamposComercial();
     mostrarToast("Formulário limpo","info"); 
   }
 
@@ -517,22 +615,42 @@
   function removerLocalDoModal(idx){ if(idx>=0&&idx<locaisArmadilhasTemp.length){ locaisArmadilhasTemp.splice(idx,1); const lista=document.getElementById('lista-locais-modal'); lista.innerHTML=locaisArmadilhasTemp.map((l,i)=>`<div class="local-armadilha-item"><span>${escapeHtml(l)}</span><button class="text-red-500 font-bold" onclick="removerLocalDoModal(${i})">Remover</button></div>`).join('')||'<div class="text-gray-400">Nenhum local adicionado</div>'; atualizarPreviewArmadilhas(); } }
   function removerLocalArmadilha(idx){ if(idx>=0&&idx<locaisArmadilhasTemp.length){ locaisArmadilhasTemp.splice(idx,1); atualizarPreviewArmadilhas(); document.getElementById('f-locaisArmadilhas').value=JSON.stringify(locaisArmadilhasTemp); } }
   function salvarLocaisArmadilhas(){ document.getElementById('f-locaisArmadilhas').value=JSON.stringify(locaisArmadilhasTemp); fecharModalArmadilhas(); atualizarPreviewArmadilhas(); mostrarToast("Locais salvos!","success"); }
+  
   function exportarBackupSeguro(){ const dados=carregarDadosSeguros(); const blob=new Blob([JSON.stringify({timestamp:new Date(),dados})],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`rfk_backup_${Date.now()}.json`; a.click(); mostrarToast("Backup gerado!","success"); }
-  function importarBackupSeguro(){ const input=document.getElementById('restore-file-input'); input.onchange=e=>{ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const backup=JSON.parse(ev.target.result); if(backup.dados&&Array.isArray(backup.dados)){ salvarDadosSeguros(backup.dados); mostrarToast("Restaurado!","success"); renderizarLista(); atualizarDashboard(); atribuirNumeroControleParaClientesAntigos(); migrarDetalhesVisitas(); }else throw new Error(); }catch(e){ mostrarToast("Arquivo inválido!","error"); } }; reader.readAsText(file); }; input.click(); }
+  function importarBackupSeguro(){ const input=document.getElementById('restore-file-input'); input.onchange=e=>{ const file=e.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=ev=>{ try{ const backup=JSON.parse(ev.target.result); if(backup.dados&&Array.isArray(backup.dados)){ salvarDadosSeguros(backup.dados); migrarDetalhesVisitas(); mostrarToast("Restaurado!","success"); renderizarLista(); atualizarDashboard(); atribuirNumeroControleParaClientesAntigos(); }else throw new Error(); }catch(e){ mostrarToast("Arquivo inválido!","error"); } }; reader.readAsText(file); }; input.click(); }
   function limparArmazenamentoSeguro(){ if(confirm("⚠️ ATENÇÃO: Isso apagará TODOS os clientes e histórico. Continuar?")){ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('rfk_encryption_key'); mostrarToast("Dados removidos!","success"); renderizarLista(); atualizarDashboard(); } }
 
-  // ==================== QR CODE MODAL ====================
+  function getUrlPublica() {
+    let url = localStorage.getItem('rfk_site_url');
+    if (!url) url = window.location.href.split('?')[0].split('#')[0];
+    return url;
+  }
+  function salvarUrlSite() {
+    let url = document.getElementById('config-site-url').value.trim();
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      localStorage.setItem('rfk_site_url', url);
+      mostrarToast("URL salva! QR Code agora aponta para o site público.", "success");
+    } else {
+      mostrarToast("Digite uma URL válida (começando com http:// ou https://)", "error");
+    }
+  }
+  function abrirSitePublico() {
+    let url = getUrlPublica();
+    if (url) window.open(url, '_blank');
+    else mostrarToast("Nenhuma URL configurada.", "error");
+  }
+
   function gerarQRCodeCliente() {
-    let urlLimpa = window.location.href.split('?')[0].split('#')[0];
+    let urlBase = getUrlPublica();
     const modal = document.getElementById('modal-qrcode');
     const qrcodeDiv = document.getElementById('qrcode');
     qrcodeDiv.innerHTML = '';
-    new QRCode(qrcodeDiv, { text: urlLimpa, width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
+    new QRCode(qrcodeDiv, { text: urlBase, width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H });
     modal.style.display = 'flex';
+    mostrarToast("QR Code gerado!", "info");
   }
   function fecharModalQR() { document.getElementById('modal-qrcode').style.display = 'none'; }
 
-  // ==================== REGISTRO QUÍMICO POR VISITA ====================
   function perguntarAplicacaoQuimica(id) {
     pendingVisitClientId = id;
     document.getElementById('modal-quimico').style.display = 'flex';
@@ -548,28 +666,29 @@
     if (idx !== -1) {
       const c = db[idx];
       const total = getTotalVisitas(c.garantia, c.freq);
-      if (c.realizadas < total && total > 0) {
-        c.realizadas++;
-        c.confirmado = true;
-        if (!c.detalhesVisitas) c.detalhesVisitas = [];
-        const novaVisitaNumero = c.realizadas;
-        const dataAtual = new Date().toISOString().split('T')[0];
-        c.detalhesVisitas.push({
-          numero: novaVisitaNumero,
-          data: dataAtual,
-          aplicouQuimico: aplicou
-        });
-        recalcularDatasCliente(c);
-        salvarDadosSeguros(db);
-        enviarMensagemVisitaConfirmada(c);
-        mostrarToast(`Visita ${c.realizadas}/${total} registrada${aplicou ? ' com aplicação química' : ' (somente inspeção)'}!`, "success");
-        renderizarLista();
-        atualizarDashboard();
-      } else if (total <= 0) {
-        mostrarToast("Ciclo inválido (frequência muito alta)", "error");
-      } else {
-        mostrarToast("Ciclo já finalizado!", "error");
+      if (c.realizadas >= total) {
+        mostrarToast("Ciclo de visitas já concluído!", "error");
+        fecharModalQuimico();
+        pendingVisitClientId = null;
+        return;
       }
+      
+      c.realizadas++;
+      if (!c.detalhesVisitas) c.detalhesVisitas = [];
+      const novaVisitaNumero = c.realizadas;
+      const dataAtual = new Date().toISOString().split('T')[0];
+      
+      c.detalhesVisitas.push({
+        numero: novaVisitaNumero,
+        data: dataAtual,
+        aplicouQuimico: aplicou
+      });
+      recalcularDatasCliente(c);
+      salvarDadosSeguros(db);
+      enviarMensagemVisitaConfirmada(c);
+      mostrarToast(`Visita ${c.realizadas}/${total} registrada!`, "success");
+      renderizarLista();
+      atualizarDashboard();
     }
     fecharModalQuimico();
     pendingVisitClientId = null;
@@ -580,11 +699,13 @@
     pendingVisitClientId = null;
   }
 
-  function confirmarVisita(id) {
+  function confirmarVisita(id, event) {
+    const btn = event?.target?.closest('button');
+    if (btn) btn.disabled = true;
+    setTimeout(() => { if(btn) btn.disabled = false; }, 2000);
     perguntarAplicacaoQuimica(id);
   }
   
-  // ==================== EDITAR APLICAÇÃO QUÍMICA DE VISITAS ANTIGAS ====================
   function editarAplicacaoQuimica(clienteId, numeroVisita) {
     editandoClienteId = clienteId;
     editandoVisitaNumero = numeroVisita;
@@ -602,6 +723,15 @@
     if (idx !== -1) {
       const c = db[idx];
       if (!c.detalhesVisitas) c.detalhesVisitas = [];
+      
+      while(c.detalhesVisitas.length < (c.realizadas || 0)) {
+        c.detalhesVisitas.push({
+          numero: c.detalhesVisitas.length + 1,
+          data: c.inicio || new Date().toISOString().split('T')[0],
+          aplicouQuimico: null
+        });
+      }
+      
       const visitaIndex = editandoVisitaNumero - 1;
       if (visitaIndex >= 0 && visitaIndex < c.detalhesVisitas.length) {
         c.detalhesVisitas[visitaIndex].aplicouQuimico = valor;
@@ -641,15 +771,95 @@
     else mostrarToast("Número inválido!","error"); 
   }
   
-  function tentarAcessoAdmin(){ const s=prompt("Senha admin:"); if(s===SENHA_MESTRA){ document.getElementById('view-cliente').classList.remove('page-active'); document.getElementById('view-admin').classList.add('page-active'); renderizarLista(); atualizarDashboard(); mostrarToast("Admin ativado","success"); }else if(s) mostrarToast("Senha incorreta!","error"); }
+  function tentarAcessoAdmin(){ const s=prompt("Senha admin:"); if(s===SENHA_MESTRA){ document.getElementById('view-cliente').classList.remove('page-active'); document.getElementById('view-admin').classList.add('page-active'); renderizarLista(); atualizarDashboard(); mostrarToast("Admin ativado","success"); } else if(s) mostrarToast("Senha incorreta!","error"); }
+
+  function validarCamposObrigatorios() {
+    const obrigatorios = ['f-razao-social', 'f-tel', 'f-rua', 'f-numero', 'f-bairro', 'f-cidade', 'f-cep'];
+    let faltam = false;
+    for (let id of obrigatorios) {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) {
+        el.classList.add('campo-obrigatorio');
+        faltam = true;
+      } else {
+        el.classList.remove('campo-obrigatorio');
+      }
+    }
+    if (faltam) {
+      mostrarToast("Preencha todos os campos obrigatórios (*)", "error");
+      return false;
+    }
+    return true;
+  }
+
+  function debounceBuscarCEP() {
+    if (timeoutCEP) clearTimeout(timeoutCEP);
+    timeoutCEP = setTimeout(() => {
+      buscarEnderecoPorCEP();
+    }, 500);
+  }
+  
+  async function buscarEnderecoPorCEP() {
+    const cepInput = document.getElementById('f-cep');
+    let cep = cepInput.value.replace(/\D/g, '');
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json();
+        if (!data.erro) {
+          document.getElementById('f-rua').value = data.logradouro || '';
+          document.getElementById('f-bairro').value = data.bairro || '';
+          document.getElementById('f-cidade').value = data.localidade || 'Tonantins';
+          removerAvisoObrigatorio(document.getElementById('f-rua'));
+          removerAvisoObrigatorio(document.getElementById('f-bairro'));
+          removerAvisoObrigatorio(document.getElementById('f-cidade'));
+          mostrarToast("Endereço preenchido!", "success");
+        } else {
+          mostrarToast("CEP não encontrado", "error");
+        }
+      } catch (err) {
+        console.log("Erro ao buscar CEP", err);
+      }
+    }
+  }
+
+  function recalcularTodosClientes() {
+    let db = carregarDadosSeguros();
+    let modificado = false;
+    for (let c of db) {
+      if (recalcularDatasCliente(c)) modificado = true;
+      const totalVisitas = getTotalVisitas(c.garantia, c.freq);
+      if (c.realizadas > totalVisitas) {
+        c.realizadas = totalVisitas;
+        modificado = true;
+      }
+    }
+    if (modificado) {
+      salvarDadosSeguros(db);
+      mostrarToast("Clientes atualizados com sucesso!", "success");
+    } else {
+      mostrarToast("Nenhum ajuste necessário", "info");
+    }
+    renderizarLista();
+    atualizarDashboard();
+  }
   
   function salvarCliente(){ 
     try{ 
-      const id=document.getElementById('f-id').value||Date.now(); 
-      const nome=document.getElementById('f-nome').value.trim(); 
-      const tel=document.getElementById('f-tel').value.trim(); 
-      if(!nome||!tel){ mostrarToast("Nome e WhatsApp obrigatórios!","error"); return; }
+      if (!validarCamposObrigatorios()) return;
+      if (!validarDataProxima()) return;
       
+      const id=document.getElementById('f-id').value || Date.now(); 
+      const razaoSocial = document.getElementById('f-razao-social').value.trim();
+      const nomeFantasia = document.getElementById('f-nome-fantasia').value.trim();
+      const tipoImovel = document.getElementById('f-tipoImovel').value;
+      const isComercial = (tipoImovel === 'comercio' || tipoImovel === 'industria');
+      let nomeCliente = razaoSocial;
+      if (isComercial && nomeFantasia) {
+        nomeCliente = `${razaoSocial} (${nomeFantasia})`;
+      }
+      
+      const tel=document.getElementById('f-tel').value.trim(); 
       const garantia=parseInt(document.getElementById('f-garantia').value); 
       const freq=parseInt(document.getElementById('f-freq').value); 
       if (freq <= 0) { mostrarToast("Frequência deve ser maior que zero!","error"); return; }
@@ -659,10 +869,15 @@
       
       const totalVisitas = getTotalVisitas(garantia, freq);
       if (realizadas > totalVisitas) { 
-        mostrarToast(`Nº de visitas realizadas não pode exceder ${totalVisitas}. Ajustado.`,"error"); 
         realizadas = totalVisitas; 
         document.getElementById('f-realizadas').value = realizadas; 
       }
+      
+      let valorRaw = document.getElementById('f-valor').value;
+      let valor = parseFloat(valorRaw.replace('.', '').replace(',', '.'));
+      if (isNaN(valor)) valor = 0;
+      
+      const formaPagamento = document.getElementById('f-formaPagamento').value;
       
       let locais=[]; 
       try{ const saved=document.getElementById('f-locaisArmadilhas').value; if(saved&&saved!=='[]') locais=JSON.parse(saved); }catch(e){} 
@@ -673,7 +888,7 @@
       
       if (idxExistente === -1) {
         const inicio = document.getElementById('f-inicio').value;
-        let ano = inicio ? new Date(inicio + "T12:00:00").getFullYear() : new Date().getFullYear();
+        let ano = inicio ? parseInt(inicio.split('-')[0]) : new Date().getFullYear();
         const proximo = obterProximoNumeroControle(ano, db);
         numeroControle = { ano: proximo.ano, seq: proximo.seq };
       } else {
@@ -681,12 +896,16 @@
       } 
       
       const cliente={ 
-        id:parseInt(id), nome, tel, 
+        id:parseInt(id), 
+        nome: nomeCliente,
+        razaoSocial: razaoSocial,
+        nomeFantasia: nomeFantasia,
+        tel, 
         rua:document.getElementById('f-rua').value, 
         numero:document.getElementById('f-numero').value, 
         bairro:document.getElementById('f-bairro').value, 
         complemento:document.getElementById('f-complemento').value, 
-        cidade:document.getElementById('f-cidade').value||'Tonantins', 
+        cidade:document.getElementById('f-cidade').value || 'Tonantins', 
         cep:document.getElementById('f-cep').value, 
         tipoImovel:document.getElementById('f-tipoImovel').value, 
         ambiente:document.getElementById('f-ambiente').value, 
@@ -701,13 +920,25 @@
         inicio:document.getElementById('f-inicio').value, 
         prox:document.getElementById('f-prox').value, 
         obs:document.getElementById('f-obs').value, 
-        confirmado:false, 
         termino:document.getElementById('f-termino').value, 
         locaisArmadilhas:locais, 
         tipoServico, 
         numeroControle,
-        detalhesVisitas: (idxExistente !== -1 && db[idxExistente].detalhesVisitas) ? db[idxExistente].detalhesVisitas : []
+        detalhesVisitas: (idxExistente !== -1 && db[idxExistente].detalhesVisitas) ? db[idxExistente].detalhesVisitas : [],
+        valor: valor,
+        formaPagamento: formaPagamento
       }; 
+      
+      while(cliente.detalhesVisitas.length < cliente.realizadas) {
+        cliente.detalhesVisitas.push({
+          numero: cliente.detalhesVisitas.length + 1,
+          data: cliente.inicio || new Date().toISOString().split('T')[0],
+          aplicouQuimico: null
+        });
+      }
+      if(cliente.detalhesVisitas.length > cliente.realizadas) {
+        cliente.detalhesVisitas = cliente.detalhesVisitas.slice(0, cliente.realizadas);
+      }
       
       recalcularDatasCliente(cliente);
       
@@ -724,7 +955,8 @@
     const c=db.find(c=>c.id==id); 
     if(!c)return; 
     document.getElementById('f-id').value=c.id; 
-    document.getElementById('f-nome').value=c.nome; 
+    document.getElementById('f-razao-social').value=c.razaoSocial || c.nome || ''; 
+    document.getElementById('f-nome-fantasia').value=c.nomeFantasia || ''; 
     document.getElementById('f-tel').value=c.tel; 
     document.getElementById('f-rua').value=c.rua||''; 
     document.getElementById('f-numero').value=c.numero||''; 
@@ -747,6 +979,9 @@
     document.getElementById('f-inicio').value=c.inicio; 
     document.getElementById('f-prox').value=c.prox; 
     document.getElementById('f-obs').value=c.obs||''; 
+    let valorExib = c.valor !== undefined ? c.valor.toFixed(2).replace('.', ',') : '';
+    document.getElementById('f-valor').value = valorExib;
+    document.getElementById('f-formaPagamento').value = c.formaPagamento || 'dinheiro';
     if(c.locaisArmadilhas&&c.locaisArmadilhas.length){ 
       locaisArmadilhasTemp=[...c.locaisArmadilhas]; 
       document.getElementById('f-locaisArmadilhas').value=JSON.stringify(locaisArmadilhasTemp); 
@@ -759,13 +994,13 @@
     } 
     const tipoRadio = document.querySelector(`input[name="tipoServico"][value="${c.tipoServico || 'tratamento'}"]`); 
     if(tipoRadio) tipoRadio.checked = true; 
-    calcularTerminoContrato();
-    calcularProximaAutomatica(); 
+    recalcularDatasFormulario();
     atualizarRecomendacao(); 
     verificarPragasRatos(); 
+    atualizarCamposComercial();
     document.getElementById('btn-cancelar-edit').classList.remove('hidden'); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    mostrarToast("Editando cliente...","info"); 
+    mostrarToast("Carregado para edição!","info"); 
   }
   
   function deletarCliente(id){ if(confirm("Tem certeza que deseja excluir este cliente permanentemente?")){ let db=carregarDadosSeguros(); db=db.filter(c=>c.id!=id); salvarDadosSeguros(db); renderizarLista(); atualizarDashboard(); mostrarToast("Removido!","success"); } }
@@ -779,17 +1014,17 @@
     if(!c){ box.innerHTML='<div class="bg-red-100 p-4 rounded-xl mt-4 text-center">❌ Nenhum contrato encontrado com este WhatsApp.</div>'; return; }
     const status=getStatusCliente(c);
     box.innerHTML=`
-      <div class="bg-white p-4 rounded-xl shadow mt-4">
-        <h3 class="font-bold">${escapeHtml(c.nome)}</h3>
-        <p>📞 ${c.tel}</p>
-        <p>📅 Próxima visita: ${formatarDataBR(c.prox)}</p>
-        <p>✅ ${c.realizadas} de ${status.totalVisitas} visitas realizadas</p>
-        <p>🔚 Término da garantia: ${formatarDataBR(c.termino)}</p>
-        <p>🛡️ Tipo: ${c.tipoServico === 'preventivo' ? 'Preventivo' : 'Tratamento'}</p>
-        <p>🏷️ Controle: ${c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : 'N/A'}</p>
-        <div class="flex gap-2 mt-3 flex-wrap">
-          <button onclick="enviarHistoricoWhatsAppPorId(${c.id})" class="bg-green-600 text-white px-4 py-2 rounded text-sm flex-1">📱 WhatsApp</button>
-          <button onclick="exportarPDFPorId(${c.id}, true)" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm flex-1">📄 Baixar Certificado</button>
+      <div class="bg-white p-4 rounded-xl shadow mt-4 text-left">
+        <h3 class="font-bold text-lg">${escapeHtml(c.nome)}</h3>
+        <p class="text-sm mt-1">📞 WhatsApp: ${c.tel}</p>
+        <p class="text-sm">📅 Próxima visita: ${formatarDataBR(c.prox)}</p>
+        <p class="text-sm">✅ Progresso: ${c.realizadas} de ${status.totalVisitas} visitas concluídas</p>
+        <p class="text-sm">🔚 Fim da garantia: ${formatarDataBR(c.termino)}</p>
+        <p class="text-sm">🛡️ Escopo: ${c.tipoServico === 'preventivo' ? 'Preventivo' : 'Tratamento'}</p>
+        <p class="text-sm">🏷️ Controle O.S: ${c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : 'N/A'}</p>
+        <div class="flex gap-2 mt-4 flex-wrap">
+          <button onclick="enviarHistoricoWhatsAppPorId(${c.id})" class="bg-green-600 text-white px-4 py-2 rounded text-sm flex-1 font-bold">📱 WhatsApp</button>
+          <button onclick="exportarPDFPorId(${c.id}, true)" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm flex-1 font-bold">📄 Certificado</button>
         </div>
       </div>`;
     if(telefonePreenchido) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -803,19 +1038,27 @@
     const html=db.map(c=>{ 
       const status=getStatusCliente(c); 
       let classCard="card-pasta pasta-em-dia"; 
-      if(status.isAtrasado)classCard="card-pasta pasta-atraso"; 
-      else if(status.isAtencao)classCard="card-pasta pasta-atencao"; 
-      else if(status.cicloCompleto)classCard="card-pasta pasta-confirmada"; 
+      let badge = '';
+      if(status.isAtrasado) {
+        classCard="card-pasta pasta-atraso";
+        badge = '<div class="sinal-alerta">ATRASADO</div>';
+      } else if(status.isAtencao) {
+        classCard="card-pasta pasta-atencao";
+        badge = '<div class="sinal-atencao">ATENÇÃO</div>';
+      } else if(status.cicloCompleto) {
+        classCard="card-pasta pasta-confirmada";
+      }
       const visitas=obterListaVisitas(c); 
       const tipoIcon = c.tipoServico === 'preventivo' ? '🛡️' : '🩺'; 
-      const numControle = c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : '---'; 
+      const numControle = c.numeroControle ? formatarNumeroControle(c.numeroControle.ano, c.numeroControle.seq) : '---';
+      const valorExibir = c.valor ? `R$ ${c.valor.toFixed(2).replace('.', ',')}` : 'Não Informado';
+      const formaExibir = { dinheiro:'💵 Dinheiro', pix:'📱 PIX', cartao_credito:'💳 Crédito', cartao_debito:'💳 Débito', boleto:'📄 Boleto', transferencia:'🏦 Transferência', outros:'🔄 Outros' }[c.formaPagamento] || c.formaPagamento;
       const progressoPercent = status.totalVisitas > 0 ? (c.realizadas / status.totalVisitas * 100) : 0;
-      return `<div class="${classCard}">${status.isAtrasado?'<div class="sinal-alerta">ATRASADO</div>':(status.isAtencao?'<div class="sinal-alerta" style="background:#f59e0b;">ATENÇÃO</div>':'')}<div class="flex justify-between flex-wrap gap-2"><div><h3 class="font-bold">${escapeHtml(c.nome)} <span class="text-xs ${c.tipoServico === 'preventivo' ? 'text-purple-600' : 'text-blue-600'}">${tipoIcon}</span><span class="numero-controle">#${numControle}</span></h3><p class="text-xs">${c.tel}</p><p class="text-xs">📅 Prox: ${formatarDataBR(c.prox)}</p><p class="text-xs">📊 ${c.realizadas}/${status.totalVisitas}</p></div><div class="flex flex-col gap-1"><button onclick="confirmarVisita(${c.id})" class="btn-pasta bg-green-500 text-white">✅ Visita</button><button onclick="editarCliente(${c.id})" class="btn-pasta bg-blue-500 text-white">✏️ Editar</button><button onclick="deletarCliente(${c.id})" class="btn-pasta bg-red-500 text-white">🗑️ Excluir</button><button onclick="exportarPDFPorId(${c.id}, false)" class="btn-pasta bg-indigo-500 text-white">📄 PDF</button><button onclick="enviarHistoricoWhatsAppPorId(${c.id})" class="btn-pasta bg-emerald-500 text-white">📱 WhatsApp</button></div></div><div class="historico-card mt-2"><div class="historico-header"><h4>📋 Histórico de Visitas</h4><div class="progresso-wrapper"><span>${c.realizadas}/${status.totalVisitas}</span><div class="progresso-barra-container"><div class="progresso-barra" style="width:${progressoPercent}%"></div></div></div></div><div class="lista-visitas">${visitas.map(v=>`<div class="visita-item"><span class="visita-numero">${v.numero}ª</span><span class="visita-data">${v.data}</span><span class="status-label ${v.realizada?'status-realizada':(v.isProxima?'status-proxima':'status-pendente')}">${v.realizada?'✅ Realizada':(v.isProxima?'⏳ Próxima':'📅 Agendada')}</span>${v.aplicouQuimico !== undefined && v.aplicouQuimico !== null ? `<span class="btn-quimico">${v.aplicouQuimico ? '💊 Químico' : '🧪 Inspeção'}</span>` : '<span class="btn-quimico" style="background:#9ca3af;">❓ Não informado</span>'}<span class="editar-visita" onclick="editarAplicacaoQuimica(${c.id}, ${v.numero})" title="Editar aplicação química">✏️ Editar</span></div>`).join('')}</div>${c.realizadas>=status.totalVisitas?'<div class="mensagem-conclusao">🏆 Ciclo de visitas concluído!</div>':''}</div></div>`; 
+      return `<div class="${classCard}">${badge}<div class="flex justify-between flex-wrap gap-2"><div><h3 class="font-bold text-slate-800">${escapeHtml(c.nome)} <span class="text-sm">${tipoIcon}</span><span class="numero-controle">#${numControle}</span></h3><p class="text-xs text-slate-600">📱 ${c.tel}</p><p class="text-xs text-slate-600">📅 Prox: ${formatarDataBR(c.prox)}</p><p class="text-xs text-slate-600">💰 ${valorExibir} | ${formaExibir}</p><p class="text-xs text-slate-700 font-bold">📊 Progresso: ${c.realizadas}/${status.totalVisitas}</p></div><div class="flex flex-col gap-1"><button onclick="confirmarVisita(${c.id}, event)" class="btn-pasta bg-green-500 text-white">✅ Visita</button><button onclick="editarCliente(${c.id})" class="btn-pasta bg-blue-500 text-white">✏️ Editar</button><button onclick="deletarCliente(${c.id})" class="btn-pasta bg-red-500 text-white">🗑️ Excluir</button><button onclick="exportarPDFPorId(${c.id}, false)" class="btn-pasta bg-indigo-500 text-white">📄 PDF</button><button onclick="enviarHistoricoWhatsAppPorId(${c.id})" class="btn-pasta bg-emerald-500 text-white">📱 WhatsApp</button></div></div><div class="historico-card mt-2"><div class="historico-header"><h4>📋 Histórico de Visitas</h4><div class="progresso-wrapper"><span>${c.realizadas}/${status.totalVisitas}</span><div class="progresso-barra-container"><div class="progresso-barra" style="width:${progressoPercent}%"></div></div></div></div><div class="lista-visitas">${visitas.map(v=>`<div class="visita-item"><span class="visita-numero">${v.numero}ª V</span><span class="visita-data">${v.data}</span><span class="status-label ${v.realizada?'status-realizada':(v.isProxima?'status-proxima':'status-pendente')}">${v.realizada?'✅ Concluída':(v.isProxima?'⏳ Próxima':'📅 Agendada')}</span>${v.aplicouQuimico !== undefined && v.aplicouQuimico !== null ? `<span class="btn-quimico">${v.aplicouQuimico ? '💊 Químico' : '🧪 Inspeção'}</span>` : '<span class="btn-quimico" style="background:#9ca3af;">❓ N/I</span>'}<span class="editar-visita" onclick="editarAplicacaoQuimica(${c.id}, ${v.numero})" title="Editar aplicação química">✏️ Ajustar</span></div>`).join('')}</div>${c.realizadas>=status.totalVisitas?'<div class="mensagem-conclusao">🏆 Ciclo de visitas concluído!</div>':''}</div></div>`; 
     }).join(''); 
     container.innerHTML=html; 
   }
   
-  // ==================== QR CODE PARA PDF ====================
   function gerarQRCodeDataURL(texto, largura = 200) {
     return new Promise((resolve, reject) => {
       QRCode.toDataURL(texto, { errorCorrectionLevel: 'H', margin: 2, width: largura }, (err, url) => {
@@ -825,7 +1068,6 @@
     });
   }
 
-  // ==================== PDF COM HISTÓRICO REAL PREENCHIDO ====================
   async function exportarPDFPorId(id, isCliente = false) {
     const db = carregarDadosSeguros();
     const cliente = db.find(c => c.id == id);
@@ -837,16 +1079,16 @@
     const loadingDiv = document.getElementById('pdf-loading');
     const statusMsg = document.getElementById('pdf-status');
     loadingDiv.style.display = 'flex';
-    statusMsg.innerText = "Preparando dados...";
+    statusMsg.innerText = "Preparando layout...";
     try {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const marginLeft = 15, marginRight = 15, contentWidth = 180;
       let y = 15;
 
-      let urlLimpa = window.location.href.split('?')[0].split('#')[0];
+      let urlBase = getUrlPublica();
       const telNumeros = cliente.tel.replace(/\D/g, '');
-      const qrUrl = `${urlLimpa}?tel=${telNumeros}`;
+      const qrUrl = `${urlBase}?tel=${telNumeros}`;
       const qrDataUrl = await gerarQRCodeDataURL(qrUrl, 250);
 
       function writeText(text, x, currentY, maxWidth, fontSize = 10, fontStyle = 'normal') {
@@ -857,18 +1099,19 @@
         return currentY + (lines.length * (fontSize * 0.38));
       }
 
-      const desenharRodape = (docInstance, paginaAtual, totalPaginas) => {
+      const desenharRodape = () => {
+        const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
+        const totalPages = doc.internal.getNumberOfPages();
         const finalY = 287;
-        docInstance.setFontSize(7);
-        docInstance.setFont('helvetica', 'normal');
-        docInstance.setTextColor(71, 85, 105);
-        docInstance.text(`RFK SERVIÇO LTDA | CNPJ: ${DADOS_EMPRESA.cnpj}`, marginLeft, finalY - 8);
-        docInstance.text(`Fone Plantão: ${DADOS_EMPRESA.telefone} | Endereço Operacional: ${DADOS_EMPRESA.endereco}`, marginLeft, finalY - 4);
-        docInstance.text(`Documento autenticado eletronicamente em ${new Date().toLocaleString()}`, marginLeft, finalY);
-        docInstance.text(`Página ${paginaAtual} de ${totalPaginas}`, marginLeft + contentWidth, finalY, { align: 'right' });
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(`RFK SERVIÇO LTDA | CNPJ: ${DADOS_EMPRESA.cnpj}`, marginLeft, finalY - 8);
+        doc.text(`Fone Plantão: ${DADOS_EMPRESA.telefone} | Endereço Operacional: ${DADOS_EMPRESA.endereco}`, marginLeft, finalY - 4);
+        doc.text(`Documento autenticado eletronicamente em ${new Date().toLocaleString()}`, marginLeft, finalY);
+        doc.text(`Página ${currentPage} de ${totalPages}`, marginLeft + contentWidth, finalY, { align: 'right' });
       };
 
-      // CABEÇALHO
       doc.setFontSize(15); doc.setFont('helvetica', 'bold');
       doc.text('RFK SERVIÇO LTDA', marginLeft, y); y += 5;
       doc.setFontSize(10); doc.setFont('helvetica', 'normal');
@@ -880,7 +1123,6 @@
       doc.setFontSize(10); doc.setFont('helvetica', 'bold');
       doc.text(`Ordem de Serviço / Controle Interno: #${numControle}`, marginLeft, y); y += 5;
 
-      // DADOS DO CLIENTE
       doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
       doc.text('DADOS DO ESTABELECIMENTO / CLIENTE', marginLeft, y); y += 4;
       doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
@@ -894,14 +1136,21 @@
       doc.text(`Composição Local: ${cliente.moradores} Hab., ${cliente.criancas || 0} Crianças (<6a), ${cliente.animais || 0} Pets ${cliente.tipoAnimais ? `(${cliente.tipoAnimais})` : ''}`, marginLeft + 75, y, { maxWidth: contentWidth - 75 });
       y += 6;
 
-      // ESPECIFICAÇÕES TÉCNICAS
+      const valorFormatado = cliente.valor ? `R$ ${cliente.valor.toFixed(2).replace('.', ',')}` : 'Não informado';
+      const formaDesc = { dinheiro:'Dinheiro', pix:'PIX', cartao_credito:'Cartão Crédito', cartao_debito:'Cartão Débito', boleto:'Boleto', transferencia:'Transferência', outros:'Outros' }[cliente.formaPagamento] || cliente.formaPagamento;
+      doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+      doc.text('INFORMAÇÕES CONTRATUAIS', marginLeft, y); y += 4;
+      doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
+      doc.text(`Valor do Contrato: ${valorFormatado}`, marginLeft, y);
+      doc.text(`Forma de Pagamento: ${formaDesc}`, marginLeft + 80, y);
+      y += 6;
+
       doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
       doc.text('ESPECIFICAÇÕES TÉCNICAS DO MANEJO QUÍMICO', marginLeft, y); y += 4;
       doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
       doc.text(`Pragas Alvo: ${getPragasLista(cliente.pragas || [])}`, marginLeft, y); y += 4;
       doc.text(`Técnica Operacional: ${getTrabalhoNome(cliente.tipoTrabalho)}`, marginLeft, y); y += 5;
 
-      // Tabela de produtos
       const tabelaProdutosHead = [['Produto Comercial', 'Princípio Ativo / Grupo', 'Reg. ANVISA', 'Dosagem Alvo']];
       const tabelaProdutosBody = [];
       let produtosSet = new Set();
@@ -927,18 +1176,13 @@
           bodyStyles: { fontSize: 7.5 },
           margin: { left: marginLeft, right: marginRight },
           styles: { cellPadding: 1.5 },
-          didDrawPage: (data) => { 
-            const pg = doc.internal.getCurrentPageInfo().pageNumber;
-            const total = doc.internal.getNumberOfPages(); 
-            desenharRodape(doc, pg, total); 
-          }
+          didDrawPage: () => { desenharRodape(); }
         });
         y = doc.lastAutoTable.finalY + 4;
       }
 
-      // Objetivo do escopo
       const servico = cliente.tipoServico || 'tratamento';
-      if(y + 12 > 275) { doc.addPage(); y = 15; }
+      if(y + 12 > 270) { doc.addPage(); y = 15; desenharRodape(); }
       doc.setFillColor(240, 248, 255);
       doc.rect(marginLeft, y - 2, contentWidth, 7, 'F');
       doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
@@ -948,10 +1192,9 @@
       doc.text(servico === 'tratamento' ? '[ X ] Choque/Tratamento Crítico    [   ] Manutenção Preventiva' : '[   ] Choque/Tratamento Crítico    [ X ] Manutenção Preventiva', marginLeft + 50, y + 2.5);
       y += 8;
 
-      // Armadilhas
       if (cliente.locaisArmadilhas && cliente.locaisArmadilhas.length) {
         const alturaBox = 5 + (cliente.locaisArmadilhas.length * 3.5);
-        if(y + alturaBox > 275) { doc.addPage(); y = 15; }
+        if(y + alturaBox > 270) { doc.addPage(); y = 15; desenharRodape(); }
         doc.setFillColor(254, 243, 199);
         doc.rect(marginLeft, y - 2, contentWidth, alturaBox, 'F');
         doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
@@ -961,12 +1204,11 @@
         y += 3.5;
       }
 
-      // Cronograma
       const status = getStatusCliente(cliente);
       const realizadas = cliente.realizadas || 0;
       const percentual = status.totalVisitas > 0 ? Math.round((realizadas / status.totalVisitas) * 100) : 0;
 
-      if(y + 25 > 275) { doc.addPage(); y = 15; }
+      if(y + 35 > 270) { doc.addPage(); y = 15; desenharRodape(); }
       doc.setFontSize(10.5); doc.setFont('helvetica', 'bold');
       doc.text('CRONOGRAMA E CICLO DE VISTORIAS', marginLeft, y); y += 4;
       doc.setFontSize(8.5); doc.setFont('helvetica', 'normal');
@@ -977,25 +1219,23 @@
       doc.text(`Evolução Corrente: ${realizadas}/${status.totalVisitas} (${percentual}%)`, marginLeft + 55, y);
       doc.text(`Próxima Intervenção: ${formatarDataBR(cliente.prox)}`, marginLeft + 110, y); y += 5;
 
-      // Barra de progresso
       doc.setFillColor(226, 232, 240);
       doc.rect(marginLeft, y - 2, contentWidth, 2, 'F');
       doc.setFillColor(59, 130, 246);
       doc.rect(marginLeft, y - 2, (contentWidth * percentual / 100), 2, 'F'); y += 4;
 
-      // Tabela de visitas com histórico REAL preenchido
       const visitas = obterListaVisitas(cliente);
       const tableData = visitas.map(v => {
         let statusTexto = v.realizada ? 'Executada' : (v.isProxima ? 'Planejada (Próxima)' : 'Agendada');
         let aplicacaoTexto = '';
-        if (v.aplicouQuimico === true) aplicacaoTexto = '[X] Sim';
-        else if (v.aplicouQuimico === false) aplicacaoTexto = '[X] Não';
-        else aplicacaoTexto = '[ ]';
+        if (v.aplicouQuimico === true) aplicacaoTexto = '💊 [X] Sim';
+        else if (v.aplicouQuimico === false) aplicacaoTexto = '🧪 [X] Inspeção';
+        else aplicacaoTexto = '[ ] Não especificado';
         return [`${v.numero}ª Visita`, v.data, statusTexto, aplicacaoTexto];
       });
       doc.autoTable({
         startY: y,
-        head: [['Etapa', 'Data Estipulada', 'Status', 'Aplicação Química']],
+        head: [['Etapa', 'Data Estipulada', 'Status', 'Manejo Químico']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [241, 245, 249], textColor: [30, 41, 59], fontStyle: 'bold', fontSize: 8 },
@@ -1003,31 +1243,25 @@
         columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 35 }, 2: { cellWidth: 40 }, 3: { cellWidth: 45, halign: 'left' } },
         margin: { left: marginLeft, right: marginRight },
         styles: { cellPadding: 1.5 },
-        didDrawPage: (data) => { 
-          const pg = doc.internal.getCurrentPageInfo().pageNumber;
-          const total = doc.internal.getNumberOfPages(); 
-          desenharRodape(doc, pg, total); 
-        }
+        didDrawPage: () => { desenharRodape(); }
       });
       y = doc.lastAutoTable.finalY + 4;
 
-      // Nota de flexibilidade
       const notaLines = doc.splitTextToSize(NOTA_FLEXIBILIDADE, contentWidth - 70);
       const alturaNota = Math.max(6, 2 + (notaLines.length * 3.5));
-      if(y + alturaNota > 275) { doc.addPage(); y = 15; }
+      if(y + alturaNota > 270) { doc.addPage(); y = 15; desenharRodape(); }
       doc.setFillColor(254, 243, 199);
       doc.rect(marginLeft, y - 2, contentWidth, alturaNota, 'F');
       doc.setFontSize(7.5); doc.setFont('helvetica', 'bold');
-      doc.text('DIRETRIZ DE TOLERÂNCIA DE AGENDAMENTO:', marginLeft + 2, y + 2);
+      doc.text('DIRETRIZ DE TOLERÂNCIA:', marginLeft + 2, y + 2);
       doc.setFont('helvetica', 'normal');
       doc.text(notaLines, marginLeft + 68, y + 2);
       y += alturaNota + 3;
 
-      // Observações
       if (cliente.obs) {
         const obsLines = doc.splitTextToSize(`ANOTAÇÕES COMPLEMENTARES DE CAMPO: ${cliente.obs}`, contentWidth - 4);
         const alturaObs = 4 + (obsLines.length * 3.5);
-        if(y + alturaObs > 275) { doc.addPage(); y = 15; }
+        if(y + alturaObs > 270) { doc.addPage(); y = 15; desenharRodape(); }
         doc.setFillColor(241, 245, 249);
         doc.rect(marginLeft, y - 2, contentWidth, alturaObs, 'F');
         doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
@@ -1035,27 +1269,25 @@
         y += alturaObs + 3;
       }
 
-      // Instruções de segurança
-      if(y + 18 > 275) { doc.addPage(); y = 15; }
+      if(y + 18 > 270) { doc.addPage(); y = 15; desenharRodape(); }
       doc.setFillColor(254, 242, 242);
       doc.rect(marginLeft, y - 2, contentWidth, 15, 'F');
       doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(153, 27, 27);
       doc.text('⚠️ SEGURANÇA E INSTRUÇÕES MÉDICAS MANDATÓRIAS:', marginLeft + 2, y + 1.5);
       doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
-      doc.text('- Manter o local isolado por no mínimo 06 horas após a aplicação (Crianças, idosos e pets expandir para 12h).', marginLeft + 2, y + 5);
-      doc.text('- Em caso de suspeita de intoxicação, ligar para o Centro de Informação Toxicológica (CIT): 0800-722-6001.', marginLeft + 2, y + 8);
-      doc.text('- Promover a ventilação ampla do imóvel abrindo janelas e portas 1 hora antes do reingresso definitivo.', marginLeft + 2, y + 11);
+      doc.text('- Manter o local isolado por no mínimo 06 horas após a aplicação (Crianças e pets expandir para 12h).', marginLeft + 2, y + 5);
+      doc.text('- Em caso de suspeita de intoxicação, ligar para o CIT: 0800-722-6001.', marginLeft + 2, y + 8);
+      doc.text('- Promover a ventilação ampla do imóvel abrindo janelas 1 hora antes do reingresso definitivo.', marginLeft + 2, y + 11);
       y += 18;
 
-      // ASSINATURAS + QR CODE
-      if (y + 35 > 275) { doc.addPage(); y = 15; }
+      if (y + 35 > 270) { doc.addPage(); y = 15; desenharRodape(); }
 
       doc.line(marginLeft, y, marginLeft + 70, y);
       doc.line(marginLeft + 100, y, marginLeft + contentWidth, y);
       y += 4;
       doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
       doc.text('RFK SERVIÇO LTDA', marginLeft + 15, y);
-      doc.text('ASSINATURA DO CLIENTE / FIEL', marginLeft + 110, y);
+      doc.text('ASSINATURA DO CLIENTE', marginLeft + 112, y);
       y += 5;
 
       doc.setFontSize(8); doc.setFont('helvetica', 'normal');
@@ -1063,17 +1295,14 @@
       doc.text('Registro: _______________________________', marginLeft + 2, y + 4);
       y += 12;
 
-      const qrWidth = 32, qrHeight = 32;
-      doc.addImage(qrDataUrl, 'PNG', marginLeft + contentWidth - qrWidth - 5, y - 16, qrWidth, qrHeight);
+      const qrWidth = 30, qrHeight = 30;
+      doc.addImage(qrDataUrl, 'PNG', marginLeft + contentWidth - qrWidth - 5, y - 18, qrWidth, qrHeight);
       doc.setFontSize(6.5);
-      doc.text('Escaneie para acessar seu contrato online', marginLeft + contentWidth - qrWidth - 5, y + 18, { align: 'center' });
+      doc.text('Consulte o cronograma online', marginLeft + contentWidth - (qrWidth/2) - 5, y + 15, { align: 'center' });
 
-      const paginaAtual = doc.internal.getCurrentPageInfo().pageNumber;
-      const totalPaginas = doc.internal.getNumberOfPages();
-      desenharRodape(doc, paginaAtual, totalPaginas);
-
-      doc.save(`Relatorio_RFK_${cliente.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
-      mostrarToast("Certificado PDF gerado com sucesso!", "success");
+      desenharRodape();
+      doc.save(`Certificado_RFK_${cliente.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+      mostrarToast("Certificado PDF gerado!", "success");
     } catch (err) {
       console.error(err);
       mostrarToast("Erro ao gerar PDF: " + err.message, "error");
@@ -1082,15 +1311,14 @@
     }
   }
 
-  // ==================== DASHBOARD ====================
   function atualizarDashboard() {
     const db = carregarDadosSeguros();
     const hojeObj = new Date();
-    const hojeISO = `${hojeObj.getFullYear()}-${(hojeObj.getMonth()+1).toString().padStart(2,'0')}-${hojeObj.getDate().toString().padStart(2,'0')}`;
+    const hojeISO = hojeObj.toISOString().split('T')[0];
     
     const proximaSemanaObj = new Date(); 
     proximaSemanaObj.setDate(hojeObj.getDate() + 7);
-    const proximaSemanaISO = `${proximaSemanaObj.getFullYear()}-${(proximaSemanaObj.getMonth()+1).toString().padStart(2,'0')}-${proximaSemanaObj.getDate().toString().padStart(2,'0')}`;
+    const proximaSemanaISO = proximaSemanaObj.toISOString().split('T')[0];
     
     let total = db.length, atrasados = 0, visitasHoje = 0, visitasSemana = 0;
     db.forEach(c => {
@@ -1114,11 +1342,29 @@
     const ctx = document.getElementById('statusChart').getContext('2d');
     if (statusChart) statusChart.destroy();
     statusChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['Em dia', 'Atenção', 'Atrasado'], datasets: [{ data: [emDia, atencao, atrasado], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } } });
+    
+    let totalContratos = db.length;
+    let valorTotal = 0;
+    let formasCount = {};
+    db.forEach(c => {
+      let val = c.valor || 0;
+      valorTotal += val;
+      let forma = c.formaPagamento || 'dinheiro';
+      formasCount[forma] = (formasCount[forma] || 0) + 1;
+    });
+    document.getElementById('finance-total-contratos').innerText = totalContratos;
+    document.getElementById('finance-valor-total').innerHTML = `R$ ${valorTotal.toFixed(2).replace('.', ',')}`;
+    const formasNomes = { dinheiro:'Dinheiro', pix:'PIX', cartao_credito:'Crédito', cartao_debito:'Débito', boleto:'Boleto', transferencia:'Transferência', outros:'Outros' };
+    let resumoHtml = '';
+    for (let [key, count] of Object.entries(formasCount)) {
+      resumoHtml += `<span class="inline-block mr-3 font-semibold">${formasNomes[key] || key}: ${count}</span>`;
+    }
+    document.getElementById('finance-resumo-formas').innerHTML = resumoHtml || 'Nenhum pagamento registrado';
   }
   
-  // ==================== INICIALIZAÇÃO ====================
   document.addEventListener('DOMContentLoaded', () => {
     migrarDetalhesVisitas();
+    atualizarCamposComercial();
     const urlParams = new URLSearchParams(window.location.search);
     const telParam = urlParams.get('tel');
     if (telParam && telParam.length >= 10) {
@@ -1127,11 +1373,13 @@
       document.getElementById('input-c-tel').value = telParam;
       acessoCliente(telParam);
     } else {
+      document.getElementById('view-admin').classList.remove('page-active');
       document.getElementById('view-cliente').classList.add('page-active');
     }
+    let urlSalva = localStorage.getItem('rfk_site_url');
+    if (urlSalva) document.getElementById('config-site-url').value = urlSalva;
     document.getElementById('f-inicio').value = new Date().toISOString().split('T')[0];
-    calcularTerminoContrato();
-    calcularProximaAutomatica();
+    recalcularDatasFormulario();
     renderizarLista();
     atualizarDashboard();
     atribuirNumeroControleParaClientesAntigos();
